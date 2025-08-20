@@ -4,10 +4,12 @@ import { useState } from "react"
 import { User, Menu, X } from "lucide-react"
 import Image from "next/image"
 import { usePathname } from "next/navigation"
+import { SignInButton, SignedIn, SignedOut, UserButton, useUser } from "@clerk/nextjs"
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const pathname = usePathname()
+  const { user } = useUser()
 
   const navLinks = [
     { name: "Home", href: "/" },
@@ -24,7 +26,7 @@ export default function Navbar() {
           
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 text-xl md:text-2xl font-bold text-gray-800">
-            <div className="w-[90px] h-[90px] relative"> {/* increased logo size */}
+            <div className="w-[90px] h-[90px] relative">
               <Image 
                 src="/images/farmer.png"
                 alt="Farmer"
@@ -46,8 +48,7 @@ export default function Navbar() {
                 key={link.href}
                 href={link.href}
                 className={`relative px-4 py-2 rounded-full border transition-all duration-300 
-                ${
-                  pathname === link.href
+                ${pathname === link.href
                     ? "text-white bg-green-600 border-green-600 shadow-md"
                     : "text-gray-700 border-transparent hover:border-green-600 hover:text-green-600 hover:bg-green-100"
                 }`}
@@ -59,15 +60,28 @@ export default function Navbar() {
 
           {/* Right Section */}
           <div className="flex items-center ml-auto space-x-6 pl-10">
-            {/* Desktop Login Button */}
-            <Link
-              href="/signin"
-              className="hidden md:flex items-center gap-2 px-5 py-2 rounded-full border border-gray-300 
-              hover:border-green-600 hover:bg-green-100 hover:text-green-600 transition-all duration-300 shadow-sm"
-            >
-              <User className="w-5 h-5 text-green-600" />
-              <span className="text-sm md:text-base font-medium">Log In</span>
-            </Link>
+            
+            {/* If logged OUT → show Login button */}
+            <SignedOut>
+              <SignInButton mode="modal" afterSignInUrl="/shop">
+                <button className="hidden md:flex items-center gap-2 px-5 py-2 rounded-full border border-gray-300 
+                  hover:border-green-600 hover:bg-green-100 hover:text-green-600 transition-all duration-300 shadow-sm">
+                  <User className="w-5 h-5 text-green-600" />
+                  <span className="text-sm md:text-base font-medium">Log In</span>
+                </button>       
+              </SignInButton>
+            </SignedOut>
+
+            {/* If logged IN → show profile photo + signout modal */}
+            <SignedIn>
+              <div className="hidden md:flex items-center gap-3">
+                <span className="font-medium text-gray-700">
+                  {user?.fullName || user?.firstName || "User"}
+                </span>
+                {/* ✅ only afterSignOutUrl is valid here */}
+                <UserButton afterSignOutUrl="/" /> 
+              </div>
+            </SignedIn>
 
             {/* Mobile Menu Button */}
             <button onClick={() => setIsOpen(!isOpen)} className="md:hidden">
@@ -85,8 +99,7 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               className={`block py-2 px-4 rounded-full border transition-all duration-300 text-center
-              ${
-                pathname === link.href
+              ${pathname === link.href
                   ? "text-white bg-green-600 border-green-600 shadow-md"
                   : "text-gray-700 border-gray-200 hover:border-green-600 hover:bg-green-50 hover:text-green-600"
               }`}
@@ -95,15 +108,25 @@ export default function Navbar() {
             </Link>
           ))}
 
-          {/* Mobile Login Button */}
-          <Link
-            href="/signin"
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-gray-300 
-            hover:border-green-600 hover:bg-green-50 hover:text-green-600 transition-all duration-300"
-          >
-            <User className="w-5 h-5 text-green-600" />
-            <span className="text-sm font-medium text-gray-700">Log In</span>
-          </Link>
+          {/* Mobile Auth */}
+          <SignedOut>
+            <SignInButton mode="modal" afterSignInUrl="/shop">
+              <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-gray-300 
+                hover:border-green-600 hover:bg-green-50 hover:text-green-600 transition-all duration-300">
+                <User className="w-5 h-5 text-green-600" />
+                <span className="text-sm font-medium text-gray-700">Log In</span>
+              </button>
+            </SignInButton>
+          </SignedOut>
+
+          <SignedIn>
+            <div className="flex flex-col items-center gap-3">
+              <span className="font-medium text-gray-700">
+                {user?.fullName || user?.firstName || "User"}
+              </span>
+              <UserButton afterSignOutUrl="/" />
+            </div>
+          </SignedIn>
         </div>
       )}
     </nav>
