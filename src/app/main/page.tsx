@@ -1,14 +1,34 @@
 "use client"
 
 import Link from "next/link"
-import { SignInButton, SignedIn, SignedOut } from "@clerk/nextjs"
+import { SignInButton, SignedIn, SignedOut, useUser, useClerk } from "@clerk/nextjs"
+import { useEffect, useState } from "react"
+import { usePathname, useRouter } from "next/navigation"
 
 export default function HeroSection() {
+  const { isSignedIn, user } = useUser()
+  const { openSignIn } = useClerk()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [isOpen, setIsOpen] = useState(false) // ✅ only one state
+
+  // custom handler for Shop Now
+  const handleShopNow = (e: React.MouseEvent) => {
+    e.preventDefault()
+    if (!user) {
+      openSignIn({ afterSignInUrl: "/shop" }) // opens Clerk modal
+    } else {
+      router.push("/shop")
+    }
+    setIsOpen(false) // close mobile menu after click
+  }
+
   return (
     <section
       className="relative bg-cover bg-center bg-no-repeat h-screen flex items-center justify-center"
       style={{ backgroundImage: "url('/images/farm.jpg')" }}
     >
+      
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/50"></div>
 
@@ -33,10 +53,15 @@ export default function HeroSection() {
             </Link>
           </SignedIn>
 
-          {/* ✅ If logged OUT → show login modal, then redirect to /shop */}
+          {/* ✅ If logged OUT → login modal + open navbar after login */}
           <SignedOut>
-            <SignInButton mode="modal" afterSignInUrl="/shop">
-              <button className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium rounded-lg shadow-md hover:bg-green-700 transition text-center">
+            <SignInButton mode="modal" signUpForceRedirectUrl="/shop">
+              <button
+                onClick={() => {
+                  localStorage.setItem("openNavbarAfterLogin", "true")
+                }}
+                className="w-full sm:w-auto px-6 py-3 bg-green-600 text-white font-medium rounded-lg shadow-md hover:bg-green-700 transition text-center"
+              >
                 Shop Now
               </button>
             </SignInButton>

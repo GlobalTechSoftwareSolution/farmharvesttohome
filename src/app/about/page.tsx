@@ -95,7 +95,7 @@ export default function AboutUs() {
             </h2>
             <p className="text-gray-700 leading-relaxed mb-4">
               At <span className="font-semibold text-green-700">Farm Harvest To Home</span>, 
-              we believe in reconnecting people with real food. 
+              we believe in recon necting people with real food. 
               Our mission is to deliver fresh, chemical-free, and 
               unpolished grains directly from our partner farmers 
               to your doorstep — ensuring freshness, transparency, 
@@ -126,43 +126,69 @@ export default function AboutUs() {
       </section>
 
       {/* ---------------- Comparison Section ---------------- */}
-      <section className="py-16 bg-gradient-to-b from-gray-50 to-gray-100">
-        <h2 className="text-4xl font-bold text-center mb-12 text-gray-800">
-          Market Products vs Farm Harvest to Home
-        </h2>
-        <div className="max-w-7xl mx-auto space-y-8">
-          {sections.map((sec, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 50 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: idx * 0.1 }}
-              viewport={{ once: true }}
-              className="grid md:grid-cols-2 gap-6"
-            >
-              {/* Market Card */}
-              <motion.div
-                whileHover={{ scale: 1.03 }}
-                className="bg-red-50 p-6 rounded-2xl shadow-md border-l-4 border-red-400"
-              >
-                <h3 className="text-xl font-semibold text-red-700">{sec.title}</h3>
-                <h4 className="mt-3 font-bold uppercase text-red-600 text-sm">{sec.market.heading}</h4>
-                <p className="mt-2 text-gray-700">{sec.market.text}</p>
-              </motion.div>
+      {/* ---------------- Comparison Section ---------------- */}
+<section className="py-16 bg-gradient-to-b from-gray-50 to-gray-100">
+  <h2 className="text-4xl font-bold text-center mb-12 text-gray-800">
+    Market Products vs Farm Harvest to Home
+  </h2>
 
-              {/* Farm Card */}
-              <motion.div
-                whileHover={{ scale: 1.03 }}
-                className="bg-green-50 p-6 rounded-2xl shadow-md border-l-4 border-green-400"
-              >
-                <h3 className="text-xl font-semibold text-green-700">{sec.title}</h3>
-                <h4 className="mt-3 font-bold text-green-600 text-sm">{sec.farm.heading}</h4>
-                <p className="mt-2 text-gray-700">{sec.farm.text}</p>
-              </motion.div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+  {/* Desktop / Tablet View (detailed cards) */}
+  <div className="hidden md:block max-w-7xl mx-auto space-y-8">
+    {sections.map((sec, idx) => (
+      <motion.div
+        key={idx}
+        initial={{ opacity: 0, y: 50 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: idx * 0.1 }}
+        viewport={{ once: true }}
+        className="grid md:grid-cols-2 gap-6"
+      >
+        {/* Market Card */}
+        <motion.div
+          whileHover={{ scale: 1.03 }}
+          className="bg-red-50 p-6 rounded-2xl shadow-md border-l-4 border-red-400"
+        >
+          <h3 className="text-xl font-semibold text-red-700">{sec.title}</h3>
+          <h4 className="mt-3 font-bold uppercase text-red-600 text-sm">{sec.market.heading}</h4>
+          <p className="mt-2 text-gray-700">{sec.market.text}</p>
+        </motion.div>
+
+        {/* Farm Card */}
+        <motion.div
+          whileHover={{ scale: 1.03 }}
+          className="bg-green-50 p-6 rounded-2xl shadow-md border-l-4 border-green-400"
+        >
+          <h3 className="text-xl font-semibold text-green-700">{sec.title}</h3>
+          <h4 className="mt-3 font-bold text-green-600 text-sm">{sec.farm.heading}</h4>
+          <p className="mt-2 text-gray-700">{sec.farm.text}</p>
+        </motion.div>
+      </motion.div>
+    ))}
+  </div>
+
+  {/* Mobile View (simplified table) */}
+  <div className="block md:hidden max-w-3xl mx-auto">
+    <table className="w-full border border-gray-300 text-sm text-gray-700">
+      <thead>
+        <tr className="bg-gray-200 text-gray-900">
+          <th className="p-2 border">Point</th>
+          <th className="p-2 border text-red-600">Market</th>
+          <th className="p-2 border text-green-600">Farm Harvest</th>
+        </tr>
+      </thead>
+      <tbody>
+        {sections.map((sec, idx) => (
+          <tr key={idx} className="text-center">
+            <td className="p-2 border font-medium">{sec.title}</td>
+            <td className="p-2 border">{sec.market.heading}</td>
+            <td className="p-2 border">{sec.farm.heading}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</section>
+
     </>
   )
 }

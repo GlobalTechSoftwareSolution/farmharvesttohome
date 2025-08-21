@@ -3,6 +3,7 @@ import Philosophy from '@/app/philosophy/page'
 import Ourstory from '@/app/ourstory/page'
 import Whychooseus from '@/app/whychooseus/page'
 import Contact from '@/app/contact/page'
+import Button from '@/app/button/page'
 
 export default function Home() {
   return (
@@ -12,6 +13,7 @@ export default function Home() {
     <Whychooseus />
     <Philosophy />
     <Contact />
+    <Button />
     </>
   )
 }

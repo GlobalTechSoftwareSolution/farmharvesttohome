@@ -5,9 +5,7 @@ import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaInstagram, FaFacebook, FaYout
 export default function ContactPage() {
   const [formData, setFormData] = useState({
     name: "",
-    phone: "",
     email: "",
-    service: "",
     message: ""
   })
 
@@ -29,14 +27,12 @@ export default function ContactPage() {
   const sendToWhatsApp = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    const { name, phone, email, service, message } = formData
+    const { name, email, message } = formData
     const yourNumber = "919844281875"
 
     const text = `Hello, I want to get in touch.%0A
 Name: ${name}%0A
-Phone: ${phone}%0A
 Email: ${email}%0A
-Service: ${service}%0A
 Message: ${message}`
 
     const url = `https://wa.me/${yourNumber}?text=${text}`
@@ -49,7 +45,7 @@ Message: ${message}`
       type: "success"
     })
 
-    setFormData({ name: "", phone: "", email: "", service: "", message: "" })
+    setFormData({ name: "", email: "", message: "" })
   }
 
   useEffect(() => {
