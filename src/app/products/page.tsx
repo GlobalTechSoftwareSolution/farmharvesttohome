@@ -13,24 +13,40 @@ export default function ProductsPage() {
 
   // Fetch products
   useEffect(() => {
-    fetch("/api/products")
-      .then((res) => res.json())
-      .then((data) => {
-        setProducts(data);
-        
-        // Extract unique categories
-        const uniqueCategories: any[] = [];
-        data.forEach((product: any) => {
-          if (product.categories && product.categories.length > 0) {
-            product.categories.forEach((category: any) => {
-              if (!uniqueCategories.find(c => c.id === category.id)) {
-                uniqueCategories.push(category);
-              }
-            });
-          }
-        });
-        setCategories(uniqueCategories);
+    const fetchAllProducts = async () => {
+      let allProducts: any[] = [];
+      let page = 1;
+      let hasMore = true;
+
+      while (hasMore) {
+        const res = await fetch(`/api/products?per_page=100&page=${page}`);
+        const data = await res.json();
+
+        if (data.length === 0) {
+          hasMore = false;
+        } else {
+          allProducts = [...allProducts, ...data];
+          page++;
+        }
+      }
+
+      setProducts(allProducts);
+
+      // Extract unique categories
+      const uniqueCategories: any[] = [];
+      allProducts.forEach((product: any) => {
+        if (product.categories && product.categories.length > 0) {
+          product.categories.forEach((category: any) => {
+            if (!uniqueCategories.find(c => c.id === category.id)) {
+              uniqueCategories.push(category);
+            }
+          });
+        }
       });
+      setCategories(uniqueCategories);
+    };
+
+    fetchAllProducts();
   }, []);
 
   const getImageUrl = (imagePath: string) => {
@@ -96,23 +112,57 @@ export default function ProductsPage() {
   };
 
   // Handle add to cart
-  const handleAddToCart = (productId: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setAddingToCart(productId);
-    
-    // Add product to selected products if not already selected
-    if (!selectedProducts.has(productId)) {
-      toggleProductSelection(productId);
+  const handleAddToCart = (productId: number, e: React.MouseEvent | any) => {
+    e.preventDefault?.();
+    e.stopPropagation?.();
+
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    // Pick selected weight (if any)
+    const selectedWeight = selectedWeights[productId] || "";
+    const availableWeights = getAvailableWeights(product);
+
+    // Calculate price based on selected weight (base is 250g)
+    const basePrice = parseFloat(product.price);
+    let price = basePrice;
+
+    if (selectedWeight) {
+      const weight = selectedWeight.toLowerCase();
+      if (weight.includes("500")) {
+        price = basePrice * 2;
+      } else if (weight.includes("1kg") || weight.includes("1000")) {
+        price = basePrice * 4;
+      } else if (weight.includes("250")) {
+        price = basePrice;
+      }
     }
-    
-    // Simulate API call delay
-    setTimeout(() => {
-      setAddingToCart(null);
-      // Redirect to cart page after animation
-      window.location.href = '/cart';
-    }, 1000);
+
+    const cartItem = {
+      id: product.id,
+      name: product.name,
+      price,
+      size: selectedWeight || "default",
+      image: product.images?.[0]?.src || "",
+      quantity: 1,
+    };
+
+    // Save to localStorage
+    const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const existingIndex = existingCart.findIndex(
+      (item: any) => item.id === cartItem.id && item.size === cartItem.size
+    );
+
+    if (existingIndex !== -1) {
+      existingCart[existingIndex].quantity += 1;
+    } else {
+      existingCart.push(cartItem);
+    }
+
+    localStorage.setItem("cart", JSON.stringify(existingCart));
+
+    // Redirect to cart
+    window.location.href = "/cart";
   };
 
   // Close weight popup

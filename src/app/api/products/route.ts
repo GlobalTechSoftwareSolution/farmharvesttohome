@@ -1,8 +1,12 @@
 import { connectToDatabase } from '../../lib/db';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const url = `${process.env.NEXT_PUBLIC_WC_API_URL}/products`;
+    const { searchParams } = new URL(req.url);
+    const page = searchParams.get("page") || "1";
+    const per_page = searchParams.get("per_page") || "100";
+
+    const url = `${process.env.NEXT_PUBLIC_WC_API_URL}/products?per_page=${per_page}&page=${page}`;
     const response = await fetch(url, {
       headers: {
         Authorization: 'Basic ' + Buffer.from(
@@ -21,7 +25,7 @@ export async function GET() {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
     return new Response(JSON.stringify({ message: 'WC API error', error: error.message }), {
       status: 500,
