@@ -38,7 +38,7 @@ const faqs = [
   },
   {
     q: "How can I contact customer support?",
-    a: "You can call us at +91-8495862494 or email us at farmharvest@gmail.com for any support or inquiries."
+    a: "You can call us at +91-9844281875 or email us at farmharvest@gmail.com for any support or inquiries."
   }
 ]
 
