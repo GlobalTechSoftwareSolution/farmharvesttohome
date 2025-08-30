@@ -2,10 +2,24 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FaShoppingCart, FaInfoCircle, FaWeightHanging, FaFilter, FaTimes } from "react-icons/fa";
+import { supabase } from "../lib/supabaseClient";
+
+interface Product {
+  id: number;
+  name: string;
+  description: string | null;
+  short_description?: string | null;
+  price: number;
+  stock: number;
+  image_url: string | null;
+  images?: { src: string }[];
+  attributes?: { slug: string; name: string; options: string[] }[];
+  product_categories?: { categories: { id: number; name: string; slug: string } }[];
+}
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
   const [selectedWeights, setSelectedWeights] = useState<{[key: number]: string}>({});
@@ -14,62 +28,72 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-  // Fetch products
+  // Fetch products from Supabase (with nested product_categories)
   useEffect(() => {
-    const fetchAllProducts = async () => {
+    const fetchProducts = async () => {
       try {
         setIsLoading(true);
-        let allProducts: any[] = [];
-        let page = 1;
-        let hasMore = true;
+        const { data, error } = await supabase
+          .from<Product>("products")
+          .select(`
+            *,
+            product_categories (
+              categories ( id, name, slug )
+            )
+          `);
 
-        while (hasMore) {
-          const res = await fetch(`/api/products?per_page=100&page=${page}`);
-          const data = await res.json();
+        if (error) {
+          console.error("Error fetching products:", error);
+          setProducts([]);
+        } else {
+          setProducts(data ?? []);
 
-          if (data.length === 0) {
-            hasMore = false;
-          } else {
-            allProducts = [...allProducts, ...data];
-            page++;
-          }
-        }
-
-        setProducts(allProducts);
-
-        // Extract unique categories
-        const uniqueCategories: any[] = [];
-        allProducts.forEach((product: any) => {
-          if (product.categories && product.categories.length > 0) {
-            product.categories.forEach((category: any) => {
+          // Extract unique categories from nested product_categories
+          const uniqueCategories: { id: number; name: string; slug: string }[] = [];
+          (data ?? []).forEach((product) => {
+            product.product_categories?.forEach((pc) => {
+              const category = pc.categories;
               if (!uniqueCategories.find(c => c.id === category.id)) {
                 uniqueCategories.push(category);
               }
             });
-          }
-        });
-        setCategories(uniqueCategories);
-      } catch (error) {
-        console.error("Error fetching products:", error);
+          });
+          setCategories(uniqueCategories);
+        }
+      } catch (err) {
+        console.error("Unexpected error:", err);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchAllProducts();
+    fetchProducts();
   }, []);
 
-  const getImageUrl = (imagePath: string) => {
-    if (imagePath.startsWith("http")) return imagePath;
-    if (!imagePath) return "/placeholder-product.jpg";
-    return `https://farmharvesttohome.com/wp-content/uploads/${imagePath.replace(/^\//, '')}`;
+  const getAvailableWeights = (product: Product) => {
+    if (product.attributes && product.attributes.length > 0) {
+      const weightAttr = product.attributes.find(
+        (attr) => attr.slug === "pa_weight" || attr.name.toLowerCase() === "weight"
+      );
+      return weightAttr ? weightAttr.options : [];
+    }
+    return [];
   };
 
-  // Filter products by category
-  const filteredProducts = selectedCategory === "all" 
-    ? products 
-    : products.filter(product => 
-        product.categories && product.categories.some((cat: any) => cat.slug === selectedCategory)
+  const getImageUrl = (product: Product) => {
+    if (product.image_url && product.image_url.startsWith("http")) return product.image_url;
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      const firstImg = product.images[0];
+      if (firstImg.src) return firstImg.src;
+    }
+    return "/placeholder-product.jpg";
+  };
+
+  // Filter products by category using nested product_categories
+  const filteredProducts = selectedCategory === "all"
+    ? products
+    : products.filter(product =>
+        product.product_categories?.some(pc => pc.categories.slug === selectedCategory)
       );
 
   // Toggle product selection
@@ -77,9 +101,7 @@ export default function ProductsPage() {
     const newSelected = new Set(selectedProducts);
     if (newSelected.has(productId)) {
       newSelected.delete(productId);
-      
-      // Remove weight selection when product is deselected
-      const newWeights = {...selectedWeights};
+      const newWeights = { ...selectedWeights };
       delete newWeights[productId];
       setSelectedWeights(newWeights);
     } else {
@@ -90,33 +112,21 @@ export default function ProductsPage() {
 
   // Handle weight selection
   const handleWeightChange = (productId: number, weight: string) => {
-    setSelectedWeights(prev => ({
-      ...prev,
-      [productId]: weight
-    }));
-  };
-
-  // Get available weights for a product
-  const getAvailableWeights = (product: any) => {
-    if (product.attributes && product.attributes.length > 0) {
-      const weightAttr = product.attributes.find((attr: any) => 
-        attr.slug === 'pa_weight' || attr.name.toLowerCase() === 'weight'
-      );
-      return weightAttr ? weightAttr.options : [];
-    }
-    return [];
+    setSelectedWeights(prev => ({ ...prev, [productId]: weight }));
   };
 
   // Handle buy now button click
   const handleBuyNowClick = (productId: number, e: React.MouseEvent) => {
-    const availableWeights = getAvailableWeights(products.find(p => p.id === productId));
-    
+    const product = products.find(p => p.id === productId);
+    if (!product) return;
+
+    const availableWeights = getAvailableWeights(product);
+
     if (availableWeights.length > 0 && !selectedWeights[productId]) {
       e.preventDefault();
       e.stopPropagation();
       setShowWeightPopup(productId);
     } else {
-      // If weight is already selected or no weights available, proceed to add to cart
       handleAddToCart(productId, e);
     }
   };
@@ -129,23 +139,15 @@ export default function ProductsPage() {
     const product = products.find(p => p.id === productId);
     if (!product) return;
 
-    // Pick selected weight (if any)
     const selectedWeight = selectedWeights[productId] || "";
-    const availableWeights = getAvailableWeights(product);
-
-    // Calculate price based on selected weight (base is 250g)
-    const basePrice = parseFloat(product.price);
+    const basePrice = product.price;
     let price = basePrice;
 
     if (selectedWeight) {
       const weight = selectedWeight.toLowerCase();
-      if (weight.includes("500")) {
-        price = basePrice * 2;
-      } else if (weight.includes("1kg") || weight.includes("1000")) {
-        price = basePrice * 4;
-      } else if (weight.includes("250")) {
-        price = basePrice;
-      }
+      if (weight.includes("500")) price = basePrice * 2;
+      else if (weight.includes("1kg") || weight.includes("1000")) price = basePrice * 4;
+      else if (weight.includes("250")) price = basePrice;
     }
 
     const cartItem = {
@@ -153,11 +155,10 @@ export default function ProductsPage() {
       name: product.name,
       price,
       size: selectedWeight || "default",
-      image: product.images?.[0]?.src || "",
+      image: product.image_url || "",
       quantity: 1,
     };
 
-    // Save to localStorage
     const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingIndex = existingCart.findIndex(
       (item: any) => item.id === cartItem.id && item.size === cartItem.size
@@ -170,12 +171,9 @@ export default function ProductsPage() {
     }
 
     localStorage.setItem("cart", JSON.stringify(existingCart));
-
-    // Redirect to cart
     window.location.href = "/cart";
   };
 
-  // Close weight popup
   const closeWeightPopup = () => {
     setShowWeightPopup(null);
   };
@@ -324,10 +322,11 @@ export default function ProductsPage() {
                   const availableWeights = getAvailableWeights(product);
                   const selectedWeight = selectedWeights[product.id] || '';
                   const isAdding = addingToCart === product.id;
-                  
+                  // Extract categories for display from product.product_categories
+                  const productCategories = product.product_categories?.map(pc => pc.categories) ?? [];
                   return (
-                    <div 
-                      key={product.id} 
+                    <div
+                      key={product.id}
                       className={`bg-white rounded-xl overflow-hidden shadow-md transition-all duration-300 hover:shadow-lg opacity-0 animate-fade-slide ${
                         isSelected ? 'ring-2 ring-green-500 transform scale-105' : 'hover:-translate-y-1'
                       }`}
@@ -335,9 +334,9 @@ export default function ProductsPage() {
                     >
                       {/* Product Image */}
                       <div className="h-56 overflow-hidden bg-gray-100 relative">
-                        <img 
-                          src={getImageUrl(product.images?.[0]?.src || '')} 
-                          alt={product.images?.[0]?.alt || product.name}
+                        <img
+                          src={getImageUrl(product)}
+                          alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                         />
                         {isAdding && (
@@ -349,14 +348,28 @@ export default function ProductsPage() {
                           Fresh
                         </div>
                       </div>
-                      
                       {/* Product Details */}
                       <div className="p-5">
                         <h2 className="font-semibold text-lg mb-2 text-gray-800 line-clamp-2">{product.name}</h2>
                         <p className="text-gray-600 mb-3 text-sm line-clamp-2">
-                          {product.short_description?.replace(/<[^>]*>/g, '').substring(0, 80)}...
+                          {(product.short_description || product.description || "")
+                            .replace(/<[^>]*>/g, "")
+                            .substring(0, 80)}
+                          ...
                         </p>
-                        
+                        {/* Product Categories Display */}
+                        {productCategories.length > 0 && (
+                          <div className="mb-2 flex flex-wrap gap-1">
+                            {productCategories.map(cat => (
+                              <span
+                                key={cat.id}
+                                className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full"
+                              >
+                                {cat.name}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                         {/* Price */}
                         <div className="flex items-center justify-between mb-4">
                           <p className="text-green-600 font-bold text-xl">₹{product.price}</p>
@@ -367,7 +380,6 @@ export default function ProductsPage() {
                             </span>
                           )}
                         </div>
-                        
                         {/* Weight Selection (if available) */}
                         {availableWeights.length > 0 && selectedWeight && (
                           <div className="mb-4">
@@ -376,17 +388,16 @@ export default function ProductsPage() {
                             </span>
                           </div>
                         )}
-                        
                         {/* Action Buttons */}
                         <div className="flex space-x-2">
                           <button
                             onClick={(e) => handleBuyNowClick(product.id, e)}
                             disabled={isAdding}
                             className={`flex-1 py-3 px-4 rounded-xl transition-all duration-300 flex items-center justify-center ${
-                              isAdding 
-                                ? 'bg-gray-400 cursor-not-allowed' 
-                                : isSelected 
-                                  ? 'bg-green-600 hover:bg-green-700 text-white shadow-md' 
+                              isAdding
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : isSelected
+                                  ? 'bg-green-600 hover:bg-green-700 text-white shadow-md'
                                   : 'bg-green-500 hover:bg-green-600 text-white shadow-md hover:shadow-lg'
                             }`}
                           >
@@ -407,8 +418,7 @@ export default function ProductsPage() {
                               </>
                             )}
                           </button>
-
-                          <Link 
+                          <Link
                             href={`/details/${product.id}`}
                             className="py-3 px-4 rounded-xl border border-gray-300 hover:border-green-500 text-gray-700 hover:text-green-600 transition-all duration-300 flex items-center justify-center"
                           >
@@ -455,12 +465,12 @@ export default function ProductsPage() {
               <p className="text-gray-600 mb-6">Choose your preferred size for this product:</p>
               
               <div className="grid grid-cols-2 gap-3 mb-6">
-                {getAvailableWeights(products.find(p => p.id === showWeightPopup)).map((weight: string) => (
+                {getAvailableWeights(products.find(p => p.id === showWeightPopup) as Product).map((weight: string) => (
                   <button
                     key={weight}
-                    onClick={() => handleWeightChange(showWeightPopup, weight)}
+                    onClick={() => handleWeightChange(showWeightPopup!, weight)}
                     className={`p-4 border-2 rounded-xl text-center transition-all duration-200 font-medium ${
-                      selectedWeights[showWeightPopup] === weight
+                      selectedWeights[showWeightPopup!] === weight
                         ? 'bg-green-100 text-green-700 border-green-500 shadow-md'
                         : 'bg-white text-gray-700 border-gray-300 hover:border-green-400 hover:bg-green-50'
                     }`}
@@ -520,12 +530,11 @@ export default function ProductsPage() {
                 {Array.from(selectedProducts).slice(0, 3).map(productId => {
                   const product = products.find(p => p.id === productId);
                   if (!product) return null;
-                  
                   const selectedWeight = selectedWeights[productId] || '';
                   return (
                     <div key={productId} className="flex items-center bg-gray-50 p-3 rounded-lg">
-                      <img 
-                        src={getImageUrl(product.images?.[0]?.src || '')} 
+                      <img
+                        src={getImageUrl(product)}
                         alt={product.name}
                         className="w-12 h-12 object-cover rounded mr-3"
                       />
