@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { readCartFromStorage, clearCartFromStorage } from "@/app/lib/cart";
-import { openWhatsAppPrefill } from "@/app/lib/whatsapp";
-import type { CartItem } from "@/app/types/cart";
+import Link from "next/link";
+import { FiCheckCircle, FiShoppingBag, FiUser, FiPhone, FiMapPin, FiMessageSquare, FiCreditCard, FiChevronRight } from "react-icons/fi";
+
+type CartItem = {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+  size?: string;
+};
 
 type Form = {
   email: string;
@@ -17,27 +25,75 @@ type Form = {
   paymentMethod: "cod" | "razorpay";
 };
 
-// Initial form state to reuse for resetting
-const initialFormState = {
-  email: "",
-  fullName: "",
-  phone: "",
-  address: "",
-  city: "",
-  state: "Karnataka",
-  postcode: "",
-  notes: "",
-  paymentMethod: "cod",
-};
+const STORAGE_KEY = "cart";
 
 export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showPopup, setShowPopup] = useState(false);
-  const [form, setForm] = useState<Form>(initialFormState);
+  const [form, setForm] = useState<Form>({
+    email: "",
+    fullName: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "Karnataka",
+    postcode: "",
+    notes: "",
+    paymentMethod: "cod",
+  });
   const [orderPlaced, setOrderPlaced] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
+  // ---- cart storage helpers ----
+  function readCart(): CartItem[] {
+    if (typeof window === "undefined") return [];
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      return data ? JSON.parse(data) : [];
+    } catch {
+      return [];
+    }
+  }
+  
+  function clearCart() {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(STORAGE_KEY);
+  }
+
+  // ---- whatsapp helper ----
+  function openWhatsApp(cart: CartItem[], total: number) {
+    const itemsText = cart
+      .map(
+        (it, i) =>
+          `${i + 1}) ${it.name}${it.size ? ` (${it.size})` : ''} x ${it.quantity} = ₹${(
+            it.price * it.quantity
+          ).toFixed(2)}`
+      )
+      .join("%0A");
+
+    const message = `🛍️ *New Order*%0A%0A
+👤 *Customer Details*%0A
+• Name: ${form.fullName}%0A
+• Phone: ${form.phone}%0A
+• Email: ${form.email || 'Not provided'}%0A%0A
+🏡 *Delivery Address*%0A
+${form.address}, ${form.city}, ${form.state} - ${form.postcode}%0A%0A
+📝 *Order Notes*%0A
+${form.notes || "-"}%0A%0A
+💳 *Payment Method*%0A
+${form.paymentMethod === "cod" ? "Cash on Delivery" : "Razorpay"}%0A%0A
+📦 *Order Items*%0A
+${itemsText}%0A%0A
+💰 *Total Amount: ₹${total.toFixed(2)}*`;
+
+    const url = `https://wa.me/<YOUR_NUMBER>?text=${message}`;
+    window.open(url, "_blank");
+  }
+
+  // ---- effects ----
   useEffect(() => {
-    setCart(readCartFromStorage());
+    setCart(readCart());
+    setIsLoading(false);
   }, []);
 
   const subtotal = useMemo(
@@ -46,10 +102,12 @@ export default function CheckoutPage() {
   );
 
   const total = subtotal;
-  const shippingLabel = "Local pickup";
 
+  // ---- handlers ----
   function onChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
@@ -57,254 +115,385 @@ export default function CheckoutPage() {
 
   function handlePlaceOrder(e: React.FormEvent) {
     e.preventDefault();
-
-    if (!cart.length) {
-      alert("Your cart is empty.");
-      return;
-    }
-    if (!form.fullName || !form.phone || !form.address || !form.city || !form.postcode) {
-      alert("Please fill in all required fields.");
-      return;
-    }
-
-    // Show confirmation popup instead of immediately opening WhatsApp
+    if (!cart.length) return alert("Your cart is empty.");
+    if (!form.fullName || !form.phone || !form.address || !form.city || !form.postcode)
+      return alert("Please fill all required fields.");
     setShowPopup(true);
   }
 
   function confirmOrder() {
     setShowPopup(false);
-    openWhatsAppPrefill(cart, { ...form, total });
-    
-    // Clear the cart and form data
-    clearCartFromStorage();
+    openWhatsApp(cart, total);
+    clearCart();
     setCart([]);
-    setForm(initialFormState);
     setOrderPlaced(true);
   }
 
-  // If order is placed, show success message
+  // ---- UI ----
   if (orderPlaced) {
     return (
-      <div className="max-w-2xl mx-auto p-6 text-center">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <div className="text-green-500 text-6xl mb-4">✓</div>
-          <h1 className="text-2xl font-bold mb-4">Order Placed Successfully!</h1>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center animate-fade-in">
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center">
+              <FiCheckCircle className="text-green-500 text-4xl" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Order Placed Successfully!</h1>
           <p className="text-gray-600 mb-6">
-            Thank you for your order. We've received your details and will contact you shortly on WhatsApp to confirm your order.
+            Thank you for your order. We'll contact you shortly on WhatsApp to confirm your order details.
           </p>
-          <button 
-            onClick={() => setOrderPlaced(false)}
-            className="bg-black text-white py-2 px-6 rounded"
+          <Link 
+            href="/shop"
+            className="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-300"
           >
-            Place Another Order
-          </button>
+            Continue Shopping
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
+      </div>
+    );
+  }
+
+  if (cart.length === 0 && !isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center">
+              <FiShoppingBag className="text-gray-400 text-4xl" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-4">Your cart is empty</h1>
+          <p className="text-gray-600 mb-6">
+            Add some products to your cart before checking out.
+          </p>
+          <Link 
+            href="/shop"
+            className="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-300"
+          >
+            Browse Products
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-6 grid md:grid-cols-2 gap-8">
-      {/* LEFT: Form */}
-      <form onSubmit={handlePlaceOrder} className="space-y-6">
-        <h2 className="text-3xl font-bold">Contact</h2>
-        <input
-          type="email"
-          name="email"
-          placeholder="Email Address"
-          value={form.email}
-          onChange={onChange}
-          className="w-full border rounded p-3"
-          required
-        />
-
-        <h2 className="text-2xl font-bold">Billing Details</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input
-            type="text"
-            name="fullName"
-            placeholder="Full name *"
-            value={form.fullName}
-            onChange={onChange}
-            className="border rounded p-3"
-            required
-          />
-          <input
-            type="tel"
-            name="phone"
-            placeholder="Phone *"
-            value={form.phone}
-            onChange={onChange}
-            className="border rounded p-3"
-            required
-          />
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="flex items-center mb-6 text-sm text-gray-500">
+          <Link href="/" className="hover:text-green-600">Home</Link>
+          <FiChevronRight className="mx-2" />
+          <Link href="/cart" className="hover:text-green-600">Cart</Link>
+          <FiChevronRight className="mx-2" />
+          <span className="text-green-600">Checkout</span>
         </div>
 
-        <input
-          type="text"
-          name="address"
-          placeholder="House number and street name *"
-          value={form.address}
-          onChange={onChange}
-          className="w-full border rounded p-3"
-          required
-        />
+        <h1 className="text-3xl font-bold text-gray-800 mb-8">Checkout</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            name="city"
-            placeholder="Town / City *"
-            value={form.city}
-            onChange={onChange}
-            className="border rounded p-3"
-            required
-          />
-          <select
-            name="state"
-            value={form.state}
-            onChange={onChange}
-            className="border rounded p-3"
-          >
-            <option value="Karnataka">Karnataka</option>
-            <option value="Tamil Nadu">Tamil Nadu</option>
-            <option value="Kerala">Kerala</option>
-            <option value="Andhra Pradesh">Andhra Pradesh</option>
-            <option value="Telangana">Telangana</option>
-          </select>
-          <input
-            type="text"
-            name="postcode"
-            placeholder="Postcode / ZIP *"
-            value={form.postcode}
-            onChange={onChange}
-            className="border rounded p-3"
-            required
-          />
-        </div>
-
-        <textarea
-          name="notes"
-          placeholder="Notes about your order (optional)"
-          value={form.notes}
-          onChange={onChange}
-          className="w-full border rounded p-3"
-        />
-
-        <h2 className="text-2xl font-bold">Shipping</h2>
-        <p className="border rounded p-3 bg-gray-50">{shippingLabel}</p>
-
-        <h2 className="text-2xl font-bold">Payment</h2>
-        <div className="space-y-2">
-          <label className="flex items-center gap-2 border p-3 rounded">
-            <input
-              type="radio"
-              name="paymentMethod"
-              value="cod"
-              checked={form.paymentMethod === "cod"}
-              onChange={onChange}
-            />
-            Cash on Delivery
-          </label>
-          {/* Razorpay option commented out as in original */}
-        </div>
-
-        <button
-          type="submit"
-          disabled={!cart.length}
-          className="w-full bg-black text-white py-3 rounded text-lg font-semibold disabled:opacity-60"
-        >
-          Place Order · ₹{total.toFixed(2)}
-        </button>
-      </form>
-
-      {/* RIGHT: Order Summary */}
-      <div className="border rounded p-4 space-y-4 bg-white md:mt-10">
-        <h2 className="text-2xl font-bold">Your Order</h2>
-
-        {!cart.length ? (
-          <p className="text-gray-600">Your cart is empty.</p>
-        ) : (
-          <>
-            {cart.map((item) => (
-              <div
-                key={`${item.id}-${item.size ?? "def"}`}
-                className="flex justify-between items-center border-b pb-3"
-              >
-                <div className="flex items-center gap-3">
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-12 h-12 rounded object-cover"
+        <div className="grid md:grid-cols-3 gap-8">
+          {/* LEFT: Checkout form */}
+          <div className="md:col-span-2">
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center">
+                <FiUser className="mr-2 text-green-600" />
+                Contact Information
+              </h2>
+              <div className="grid md:grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
+                  <input
+                    name="fullName"
+                    value={form.fullName}
+                    onChange={onChange}
+                    placeholder="Your full name"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
                   />
-                  <div>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-gray-500">
-                      {item.size ? `Size: ${item.size} · ` : ""}
-                      Qty: {item.quantity}
-                    </div>
-                  </div>
                 </div>
-                <div className="font-semibold">
-                  ₹{(item.price * item.quantity).toFixed(2)}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number *</label>
+                  <input
+                    name="phone"
+                    value={form.phone}
+                    onChange={onChange}
+                    placeholder="Your phone number"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  />
                 </div>
               </div>
-            ))}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={onChange}
+                  placeholder="Your email address"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+            </div>
 
-            <div className="flex justify-between pt-3">
-              <span>Subtotal</span>
-              <span>₹{subtotal.toFixed(2)}</span>
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center">
+                <FiMapPin className="mr-2 text-green-600" />
+                Delivery Address
+              </h2>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                <input
+                  name="address"
+                  value={form.address}
+                  onChange={onChange}
+                  placeholder="Your complete address"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  required
+                />
+              </div>
+              <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
+                  <input
+                    name="city"
+                    value={form.city}
+                    onChange={onChange}
+                    placeholder="City"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <input
+                    name="state"
+                    value={form.state}
+                    onChange={onChange}
+                    placeholder="State"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
+                  <input
+                    name="postcode"
+                    value={form.postcode}
+                    onChange={onChange}
+                    placeholder="Postal code"
+                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span>Shipping</span>
-              <span>{shippingLabel}</span>
+
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center">
+                <FiMessageSquare className="mr-2 text-green-600" />
+                Order Notes
+              </h2>
+              <textarea
+                name="notes"
+                value={form.notes}
+                onChange={onChange}
+                placeholder="Any special instructions for your order..."
+                rows={4}
+                className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              />
             </div>
-            <div className="flex justify-between font-bold text-lg border-t pt-3">
-              <span>Total</span>
-              <span>₹{total.toFixed(2)}</span>
+
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h2 className="text-xl font-semibold mb-6 flex items-center">
+                <FiCreditCard className="mr-2 text-green-600" />
+                Payment Method
+              </h2>
+              <div className="space-y-3">
+                <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="cod"
+                    checked={form.paymentMethod === "cod"}
+                    onChange={onChange}
+                    className="text-green-600 focus:ring-green-500"
+                  />
+                  <div className="ml-3">
+                    <span className="block font-medium">Cash on Delivery</span>
+                    <span className="block text-sm text-gray-500">Pay when you receive your order</span>
+                  </div>
+                </label>
+                <label className="flex items-center p-4 border border-gray-300 rounded-lg cursor-pointer hover:border-green-500 transition-colors">
+                  <input
+                    type="radio"
+                    name="paymentMethod"
+                    value="razorpay"
+                    checked={form.paymentMethod === "razorpay"}
+                    onChange={onChange}
+                    className="text-green-600 focus:ring-green-500"
+                  />
+                  <div className="ml-3">
+                    <span className="block font-medium">Razorpay</span>
+                    <span className="block text-sm text-gray-500">Pay securely with Razorpay</span>
+                  </div>
+                </label>
+              </div>
             </div>
-          </>
-        )}
+          </div>
+
+          {/* RIGHT: Order summary */}
+          <div className="md:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6">
+              <h2 className="text-xl font-semibold mb-6">Order Summary</h2>
+              
+              <div className="space-y-4 mb-6 max-h-80 overflow-y-auto">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex items-center border-b pb-4">
+                    <div className="w-16 h-16 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0">
+                      <img 
+                        src={item.image || "/placeholder-product.jpg"} 
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="ml-4 flex-1">
+                      <h3 className="font-medium text-gray-800 line-clamp-1">{item.name}</h3>
+                      {item.size && <p className="text-sm text-gray-500">{item.size}</p>}
+                      <div className="flex justify-between items-center mt-1">
+                        <span className="text-sm text-gray-600">Qty: {item.quantity}</span>
+                        <span className="font-medium text-green-600">₹{(item.price * item.quantity).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Subtotal</span>
+                  <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Shipping</span>
+                  <span className="font-medium text-green-600">Free</span>
+                </div>
+                <div className="flex justify-between pt-3 border-t">
+                  <span className="text-lg font-semibold">Total</span>
+                  <span className="text-lg font-bold text-green-600">₹{total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handlePlaceOrder}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-4 rounded-lg transition-colors duration-300"
+              >
+                Place Order
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Confirmation Popup Modal */}
+      {/* Confirmation Popup */}
       {showPopup && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full animate-scale-in">
             <h2 className="text-xl font-bold mb-4">Confirm Your Order</h2>
+            
+            <div className="mb-6 space-y-3">
+              <div className="flex items-center">
+                <FiUser className="text-gray-500 mr-2" />
+                <span>{form.fullName}</span>
+              </div>
+              <div className="flex items-center">
+                <FiPhone className="text-gray-500 mr-2" />
+                <span>{form.phone}</span>
+              </div>
+              {form.email && (
+                <div className="flex items-center">
+                  <span className="text-gray-500 mr-2">📧</span>
+                  <span>{form.email}</span>
+                </div>
+              )}
+              <div className="flex items-start">
+                <FiMapPin className="text-gray-500 mr-2 mt-1 flex-shrink-0" />
+                <span>{form.address}, {form.city}, {form.state} - {form.postcode}</span>
+              </div>
+              {form.notes && (
+                <div className="flex items-start">
+                  <FiMessageSquare className="text-gray-500 mr-2 mt-1 flex-shrink-0" />
+                  <span>Notes: {form.notes}</span>
+                </div>
+              )}
+              <div className="flex items-center">
+                <FiCreditCard className="text-gray-500 mr-2" />
+                <span>Payment: {form.paymentMethod === "cod" ? "Cash on Delivery" : "Razorpay"}</span>
+              </div>
+            </div>
 
-            <p className="mb-3">👤 {form.fullName}</p>
-            <p className="mb-3">📞 {form.phone}</p>
-            <p className="mb-3">🏡 {form.address}, {form.city}, {form.state} - {form.postcode}</p>
-
-            <h3 className="font-semibold mb-2">🛍️ Items</h3>
-            <ul className="mb-3 space-y-1 text-sm">
-              {cart.map((it, i) => (
-                <li key={i}>
-                  {i + 1}) {it.name} x {it.quantity} = ₹{(it.price * it.quantity).toFixed(2)}
-                </li>
+            <h3 className="font-semibold mb-3">Order Items</h3>
+            <div className="mb-4 max-h-40 overflow-y-auto">
+              {cart.map((item, i) => (
+                <div key={i} className="text-sm py-1 border-b last:border-b-0">
+                  {i + 1} {item.name}{item.size ? ` (${item.size})` : ''} x {item.quantity} = ₹
+                  {(item.price * item.quantity).toFixed(2)}
+                </div>
               ))}
-            </ul>
-
-            <p className="font-bold">💰 Total: ₹{total.toFixed(2)}</p>
-
-            <div className="flex justify-end gap-3 mt-6">
+            </div>
+            
+            <div className="flex justify-between font-bold mb-4">
+              <span>Total:</span>
+              <span className="text-green-600">₹{total.toFixed(2)}</span>
+            </div>
+            
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowPopup(false)}
-                className="px-4 py-2 border rounded"
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors duration-200"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmOrder}
-                className="px-4 py-2 bg-green-600 text-white rounded"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center"
               >
-                OK ✅
+                Confirm Order
               </button>
             </div>
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        .animate-fade-in {
+          animation: fadeIn 0.3s ease-out forwards;
+        }
+        .animate-scale-in {
+          animation: scaleIn 0.3s ease-out forwards;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .line-clamp-1 {
+          display: -webkit-box;
+          -webkit-line-clamp: 1;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+      `}</style>
     </div>
   );
 }
