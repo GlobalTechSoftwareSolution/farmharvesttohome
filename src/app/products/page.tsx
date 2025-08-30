@@ -419,7 +419,7 @@ export default function ProductsPage() {
                             )}
                           </button>
                           <Link
-                            href={`/details/${product.id}`}
+                            href={`/products/${product.id}`}
                             className="py-3 px-4 rounded-xl border border-gray-300 hover:border-green-500 text-gray-700 hover:text-green-600 transition-all duration-300 flex items-center justify-center"
                           >
                             <FaInfoCircle className="mr-2" />
