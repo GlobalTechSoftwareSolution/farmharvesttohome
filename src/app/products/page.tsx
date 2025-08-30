@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { FaShoppingCart, FaInfoCircle, FaWeightHanging, FaFilter, FaTimes } from "react-icons/fa";
+import { FaShoppingCart, FaInfoCircle, FaSearch, FaWeightHanging, FaFilter, FaTimes } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 
 interface Product {
@@ -21,6 +21,7 @@ export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [search, setSearch] = useState<string>(""); // Added missing search state
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
   const [selectedWeights, setSelectedWeights] = useState<{[key: number]: string}>({});
   const [showWeightPopup, setShowWeightPopup] = useState<number | null>(null);
@@ -34,7 +35,7 @@ export default function ProductsPage() {
       try {
         setIsLoading(true);
         const { data, error } = await supabase
-          .from<Product>("products")
+          .from("products")
           .select(`
             *,
             product_categories (
@@ -49,15 +50,16 @@ export default function ProductsPage() {
           setProducts(data ?? []);
 
           // Extract unique categories from nested product_categories
-          const uniqueCategories: { id: number; name: string; slug: string }[] = [];
-          (data ?? []).forEach((product) => {
-            product.product_categories?.forEach((pc) => {
-              const category = pc.categories;
-              if (!uniqueCategories.find(c => c.id === category.id)) {
-                uniqueCategories.push(category);
-              }
-            });
-          });
+const uniqueCategories: { id: number; name: string; slug: string }[] = [];
+(data ?? []).forEach((product) => {
+  product.product_categories?.forEach((pc: { categories: { id: number; name: string; slug: string } }) => {
+    const category = pc.categories;
+    if (!uniqueCategories.find(c => c.id === category.id)) {
+      uniqueCategories.push(category);
+    }
+  });
+});
+
           setCategories(uniqueCategories);
         }
       } catch (err) {
@@ -90,11 +92,19 @@ export default function ProductsPage() {
   };
 
   // Filter products by category using nested product_categories
-  const filteredProducts = selectedCategory === "all"
+  const filteredByCategory = selectedCategory === "all"
     ? products
     : products.filter(product =>
         product.product_categories?.some(pc => pc.categories.slug === selectedCategory)
       );
+
+  // Filter products by search query
+  const filteredProducts = search
+    ? filteredByCategory.filter(product => 
+        product.name.toLowerCase().includes(search.toLowerCase()) ||
+        (product.description && product.description.toLowerCase().includes(search.toLowerCase()))
+      )
+    : filteredByCategory;
 
   // Toggle product selection
   const toggleProductSelection = (productId: number) => {
@@ -188,6 +198,19 @@ export default function ProductsPage() {
             <p className="text-gray-600">Discover farm-fresh goodness delivered to your doorstep</p>
           </div>
           
+          {/* Desktop Search Bar */}
+          <div className="hidden md:flex items-center">
+            <div className="relative flex-1 mr-4">
+              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
+          </div>
           
           {/* Mobile Filter Toggle */}
           <button
@@ -202,6 +225,16 @@ export default function ProductsPage() {
         {/* Mobile Filter Panel */}
         {showMobileFilters && (
           <div className="md:hidden bg-white rounded-lg shadow-md p-4 mb-6 animate-fade-in">
+            <div className="relative flex-1 mr-4 mb-4">
+              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+            </div>
             <h3 className="font-semibold mb-3 text-gray-700 flex items-center">
               <FaFilter className="mr-2" />
               Filter by Category
@@ -270,6 +303,9 @@ export default function ProductsPage() {
                   <span> in <span className="font-semibold text-green-600">
                     {categories.find(c => c.slug === selectedCategory)?.name}
                   </span></span>
+                )}
+                {search && (
+                  <span> matching "<span className="font-semibold text-green-600">{search}</span>"</span>
                 )}
               </p>
             </div>
@@ -444,7 +480,10 @@ export default function ProductsPage() {
                 <h3 className="text-xl font-medium text-gray-600 mb-2">No products found</h3>
                 <p className="text-gray-500 mb-4">Try selecting a different category or check back later</p>
                 <button
-                  onClick={() => setSelectedCategory("all")}
+                  onClick={() => {
+                    setSelectedCategory("all");
+                    setSearch("");
+                  }}
                   className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors duration-300"
                 >
                   View All Products

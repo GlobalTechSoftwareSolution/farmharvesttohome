@@ -114,7 +114,7 @@ Message: ${message}`
             <div className="flex space-x-5 text-2xl text-gray-700">
             <a href="https://www.instagram.com/farmharvesttohome/?next=%2F" className="hover:text-pink-500 transition"><FaInstagram /></a>
             <a href="https://www.facebook.com/share/175Y72VCNJ/" className="hover:text-blue-500 transition"><FaFacebook /></a>
-            <a href="https://www.youtube.com/@farmharvesttohome" className="hover:text-green-500 transition"><FaYoutube /></a>
+            <a href="https://www.youtube.com/@farmharvesttohome" className="hover:text-red-500 transition"><FaYoutube /></a>
             </div>
           </div>
         </div>

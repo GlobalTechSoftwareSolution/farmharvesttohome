@@ -1,13 +1,16 @@
+// app/api/place-order/route.ts
+import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
-export default async function handler(req, res) {
-  if (req.method !== "POST") return res.status(405).end();
-
-  const { order } = req.body;
-
-  if (!order) return res.status(400).json({ error: "No order data" });
-
+export async function POST(req: Request) {
   try {
+    const body = await req.json();
+    const { order } = body;
+
+    if (!order) {
+      return NextResponse.json({ error: "No order data" }, { status: 400 });
+    }
+
     // create transporter
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -41,13 +44,13 @@ export default async function handler(req, res) {
         <p>Email: ${order.customer_details.email}</p>
         <p>Phone: ${order.customer_details.phone}</p>
         <p>Address: ${order.customer_details.address}, ${order.customer_details.city}, ${order.customer_details.state} - ${order.customer_details.postcode}</p>
-        <p>Items: ${order.items.map(i => `${i.name} x ${i.qty}`).join(", ")}</p>
+        <p>Items: ${order.items.map((i: any) => `${i.name} x ${i.qty}`).join(", ")}</p>
       `,
     });
 
-    res.status(200).json({ message: "Emails sent" });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Failed to send emails" });
+    return NextResponse.json({ message: "Emails sent" }, { status: 200 });
+  } catch (err: any) {
+    console.error("Email error:", err);
+    return NextResponse.json({ error: "Failed to send emails" }, { status: 500 });
   }
 }
