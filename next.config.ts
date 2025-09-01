@@ -1,8 +1,11 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+// next.config.js
+module.exports = {
   images: {
-    domains: ["farmharvesttohome.com"], // add your image host here
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "github.com",
+      },
+    ],
   },
 };
-
-module.exports = nextConfig;
