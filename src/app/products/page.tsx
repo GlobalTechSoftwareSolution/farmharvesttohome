@@ -4,6 +4,16 @@ import Link from "next/link";
 import { FaShoppingCart, FaInfoCircle, FaSearch, FaWeightHanging, FaFilter, FaTimes } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
 
+interface ProductCategory {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+interface ProductCategories {
+  categories: ProductCategory;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -14,7 +24,7 @@ interface Product {
   image_url: string | null;
   images?: { src: string }[];
   attributes?: { slug: string; name: string; options: string[] }[];
-  product_categories?: { categories: { id: number; name: string; slug: string } }[];
+  product_categories?: ProductCategories[];
   variations?: {
     weights: { label: string; price: number }[];
   };
@@ -56,12 +66,25 @@ export default function ProductsPage() {
           console.error("Error fetching products:", error);
           setProducts([]);
         } else {
-          setProducts(data ?? []);
+          // Transform the data to match our Product type
+         const transformedData: Product[] = (data || []).map((product: any) => ({
+  ...product,
+  product_categories: (product.product_categories || []).map((pc: any) => ({
+    categories: (pc.categories || []).map((c: any) => ({
+      id: Number(c.id),
+      name: String(c.name),
+      slug: String(c.slug),
+    })),
+  })),
+}));
+
+          
+          setProducts(transformedData);
 
           // Extract unique categories from nested product_categories
           const uniqueCategories: { id: number; name: string; slug: string }[] = [];
-          (data ?? []).forEach((product) => {
-            product.product_categories?.forEach((pc: { categories: { id: number; name: string; slug: string } }) => {
+          transformedData.forEach((product) => {
+            product.product_categories?.forEach((pc: ProductCategories) => {
               const category = pc.categories;
               if (!uniqueCategories.find(c => c.id === category.id)) {
                 uniqueCategories.push(category);
@@ -270,25 +293,6 @@ export default function ProductsPage() {
                 className="w-full pl-10 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
-            {/* Category filter
-            <h3 className="font-semibold mb-3 text-gray-700 flex items-center">
-              <FaFilter className="mr-2" />
-              Filter by Category
-            </h3>
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setShowMobileFilters(false);
-              }}
-              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
-            >
-              {categories.map(category => (
-                <option key={category.id} value={category.slug}>
-                  {category.name}
-                </option>
-              ))}
-            </select> */}
             {/* Category group filter mobile */}
             <h3 className="font-semibold mb-3 text-gray-700 flex items-center">
               <FaFilter className="mr-2" />
