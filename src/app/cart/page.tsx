@@ -7,7 +7,7 @@ type CartItem = {
   id: number
   name: string
   price: number | null
-  size: string
+  size: string | null
   image: string
   quantity: number
 }
@@ -54,12 +54,12 @@ export default function CartPage() {
   }, [cart, isLoading])
 
   // ✅ Remove item
-  const handleRemove = (id: number, size: string) => {
+  const handleRemove = (id: number, size: string | null) => {
     setCart(prev => prev.filter(item => !(item.id === id && item.size === size)))
   }
 
   // ✅ Update quantity
-  const handleQuantityChange = (id: number, size: string, qty: number) => {
+  const handleQuantityChange = (id: number, size: string | null, qty: number) => {
     if (qty < 1) return
     const updated = cart.map(item =>
       item.id === id && item.size === size ? { ...item, quantity: qty } : item
@@ -98,7 +98,7 @@ export default function CartPage() {
               Your cart is empty
             </p>
             <button
-              onClick={() => router.push("/products")}
+              onClick={() => router.push("/shop")}
               className="bg-green-600 text-white px-5 sm:px-6 py-2 sm:py-3 rounded-lg hover:bg-green-700 transition-colors"
             >
               Continue Shopping
@@ -121,16 +121,18 @@ export default function CartPage() {
                 <tbody>
                   {cart.map((item, i) => (
                     <tr key={i} className="border-b hover:bg-gray-50 transition-colors">
-                      <td className="px-4 py-4 flex items-center gap-4">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-16 h-16 object-cover rounded-lg border"
-                        />
-                        <div>
+                      <td className="px-4 py-4 flex flex-col gap-1">
+                        <div className="flex items-center gap-4">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-16 h-16 object-cover rounded-lg border"
+                          />
                           <p className="font-medium text-gray-800">{item.name}</p>
-                          <p className="text-sm text-gray-500">Size: {item.size}</p>
                         </div>
+                        {item.size && (
+                          <p className="text-sm text-gray-500 pl-20">Size: {item.size}</p>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-center font-medium">
                         ₹{(Number(item.price) || 0).toFixed(2)}
@@ -189,7 +191,9 @@ export default function CartPage() {
                   />
                   <div className="flex-1 text-center sm:text-left">
                     <p className="font-medium text-gray-800">{item.name}</p>
-                    <p className="text-sm text-gray-500 mb-2">Size: {item.size}</p>
+                    {item.size && (
+                      <p className="text-sm text-gray-500 mb-2">Size: {item.size}</p>
+                    )}
                     <p className="font-medium">₹{(Number(item.price) || 0).toFixed(2)}</p>
 
                     <div className="mt-2 flex items-center justify-center sm:justify-start border rounded-lg overflow-hidden w-fit mx-auto sm:mx-0">

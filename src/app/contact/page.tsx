@@ -1,5 +1,6 @@
 "use client"
 import { useState, useRef, FormEvent, useEffect } from "react"
+import emailjs from "@emailjs/browser"
 import { FaMapMarkerAlt, FaPhoneAlt, FaEnvelope, FaInstagram, FaFacebook, FaYoutube } from "react-icons/fa"
 
 export default function ContactPage() {
@@ -24,28 +25,37 @@ export default function ContactPage() {
     setFormData(prev => ({ ...prev, [name]: value }))
   }
 
-  const sendToWhatsApp = (e: FormEvent<HTMLFormElement>) => {
+  // ✅ EmailJS Send Function
+  const sendEmail = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    const { name, email, message } = formData
-    const yourNumber = "919844281875"
+    if (!form.current) return
 
-    const text = `Hello, I want to get in touch.%0A
-Name: ${name}%0A
-Email: ${email}%0A
-Message: ${message}`
-
-    const url = `https://wa.me/${yourNumber}?text=${text}`
-
-    window.open(url, "_blank")
-
-    setPopup({
-      show: true,
-      message: "✅ Opening WhatsApp...",
-      type: "success"
-    })
-
-    setFormData({ name: "", email: "", message: "" })
+    emailjs
+     .sendForm(
+        process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!,
+        process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!,
+        form.current,
+        process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!
+      )
+      .then(
+        () => {
+          setPopup({
+            show: true,
+            message: "✅ Message sent successfully!",
+            type: "success"
+          })
+          setFormData({ name: "", email: "", message: "" })
+        },
+        (error) => {
+          console.error("EmailJS Error:", error.text)
+          setPopup({
+            show: true,
+            message: "❌ Failed to send message. Please try again!",
+            type: "error"
+          })
+        }
+      )
   }
 
   useEffect(() => {
@@ -63,7 +73,6 @@ Message: ${message}`
         
         {/* LEFT SIDE - Contact Info */}
         <div>
-          {/* LEFT HEADING STYLE */}
           <h2 className="text-4xl font-extrabold text-green-700 mb-3 tracking-tight">
             Get In Touch
           </h2>
@@ -121,13 +130,12 @@ Message: ${message}`
 
         {/* RIGHT SIDE - Contact Form */}
         <div>
-          {/* RIGHT HEADING STYLE */}
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Drop us a line or two
           </h2>
           <p className="text-gray-500 mb-6">We’d love to hear from you</p>
 
-          <form ref={form} onSubmit={sendToWhatsApp} className="space-y-5">
+          <form ref={form} onSubmit={sendEmail} className="space-y-5">
             
             <input
               type="text"

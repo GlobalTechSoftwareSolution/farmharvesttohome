@@ -15,19 +15,28 @@ interface Product {
   images?: { src: string }[];
   attributes?: { slug: string; name: string; options: string[] }[];
   product_categories?: { categories: { id: number; name: string; slug: string } }[];
+  variations?: {
+    weights: { label: string; price: number }[];
+  };
+  category_group?: string;
 }
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [search, setSearch] = useState<string>(""); // Added missing search state
+  const [selectedCategoryGroup, setSelectedCategoryGroup] = useState<string>("all");
+  const [search, setSearch] = useState<string>("");
+  // Price filter: single max price slider
+  const [maxPrice, setMaxPrice] = useState<number>(1000);
   const [selectedProducts, setSelectedProducts] = useState<Set<number>>(new Set());
   const [selectedWeights, setSelectedWeights] = useState<{[key: number]: string}>({});
   const [showWeightPopup, setShowWeightPopup] = useState<number | null>(null);
   const [addingToCart, setAddingToCart] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  const CATEGORY_GROUPS = ["MILLET", "SPICES AND MASALA", "PULSES AND GRAINS"];
 
   // Fetch products from Supabase (with nested product_categories)
   useEffect(() => {
@@ -37,7 +46,7 @@ export default function ProductsPage() {
         const { data, error } = await supabase
           .from("products")
           .select(`
-            *,
+            id, name, description, short_description, price, stock, image_url, images, attributes, variations, category_group,
             product_categories (
               categories ( id, name, slug )
             )
@@ -50,15 +59,15 @@ export default function ProductsPage() {
           setProducts(data ?? []);
 
           // Extract unique categories from nested product_categories
-const uniqueCategories: { id: number; name: string; slug: string }[] = [];
-(data ?? []).forEach((product) => {
-  product.product_categories?.forEach((pc: { categories: { id: number; name: string; slug: string } }) => {
-    const category = pc.categories;
-    if (!uniqueCategories.find(c => c.id === category.id)) {
-      uniqueCategories.push(category);
-    }
-  });
-});
+          const uniqueCategories: { id: number; name: string; slug: string }[] = [];
+          (data ?? []).forEach((product) => {
+            product.product_categories?.forEach((pc: { categories: { id: number; name: string; slug: string } }) => {
+              const category = pc.categories;
+              if (!uniqueCategories.find(c => c.id === category.id)) {
+                uniqueCategories.push(category);
+              }
+            });
+          });
 
           setCategories(uniqueCategories);
         }
@@ -73,6 +82,10 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
   }, []);
 
   const getAvailableWeights = (product: Product) => {
+    // Check for variations.weights first
+    if (product.variations?.weights && Array.isArray(product.variations.weights)) {
+      return product.variations.weights.map(w => w.label);
+    }
     if (product.attributes && product.attributes.length > 0) {
       const weightAttr = product.attributes.find(
         (attr) => attr.slug === "pa_weight" || attr.name.toLowerCase() === "weight"
@@ -98,13 +111,24 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
         product.product_categories?.some(pc => pc.categories.slug === selectedCategory)
       );
 
+  // Filter by category group
+  const filteredByCategoryGroup = selectedCategoryGroup === "all"
+    ? filteredByCategory
+    : filteredByCategory.filter(product => product.category_group === selectedCategoryGroup);
+
   // Filter products by search query
-  const filteredProducts = search
-    ? filteredByCategory.filter(product => 
+  const filteredBySearch = search
+    ? filteredByCategoryGroup.filter(product =>
         product.name.toLowerCase().includes(search.toLowerCase()) ||
         (product.description && product.description.toLowerCase().includes(search.toLowerCase()))
       )
-    : filteredByCategory;
+    : filteredByCategoryGroup;
+
+  // Filter products by price slider
+  const filteredProducts =
+    maxPrice === 1000
+      ? filteredBySearch
+      : filteredBySearch.filter(product => product.price <= maxPrice);
 
   // Toggle product selection
   const toggleProductSelection = (productId: number) => {
@@ -127,12 +151,11 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
 
   // Handle buy now button click
   const handleBuyNowClick = (productId: number, e: React.MouseEvent) => {
+    // Always show the weight popup if available weights, otherwise just add to cart
     const product = products.find(p => p.id === productId);
     if (!product) return;
-
     const availableWeights = getAvailableWeights(product);
-
-    if (availableWeights.length > 0 && !selectedWeights[productId]) {
+    if (availableWeights.length > 0) {
       e.preventDefault();
       e.stopPropagation();
       setShowWeightPopup(productId);
@@ -150,14 +173,25 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
     if (!product) return;
 
     const selectedWeight = selectedWeights[productId] || "";
-    const basePrice = product.price;
-    let price = basePrice;
+    let price = product.price;
 
-    if (selectedWeight) {
+    if (selectedWeight && product.variations?.weights) {
+      // Try to find the price for the selected weight
+      const foundWeight = product.variations.weights.find(w => w.label === selectedWeight);
+      if (foundWeight) {
+        price = foundWeight.price;
+      } else {
+        // fallback to the old logic if not found
+        const weight = selectedWeight.toLowerCase();
+        if (weight.includes("500")) price = product.price * 2;
+        else if (weight.includes("1kg") || weight.includes("1000")) price = product.price * 4;
+        else if (weight.includes("250")) price = product.price;
+      }
+    } else if (selectedWeight) {
       const weight = selectedWeight.toLowerCase();
-      if (weight.includes("500")) price = basePrice * 2;
-      else if (weight.includes("1kg") || weight.includes("1000")) price = basePrice * 4;
-      else if (weight.includes("250")) price = basePrice;
+      if (weight.includes("500")) price = product.price * 2;
+      else if (weight.includes("1kg") || weight.includes("1000")) price = product.price * 4;
+      else if (weight.includes("250")) price = product.price;
     }
 
     const cartItem = {
@@ -167,6 +201,7 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
       size: selectedWeight || "default",
       image: product.image_url || "",
       quantity: 1,
+      category_group: product.category_group,
     };
 
     const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -235,6 +270,7 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
                 className="w-full pl-10 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-500"
               />
             </div>
+            {/* Category filter
             <h3 className="font-semibold mb-3 text-gray-700 flex items-center">
               <FaFilter className="mr-2" />
               Filter by Category
@@ -245,50 +281,125 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
                 setSelectedCategory(e.target.value);
                 setShowMobileFilters(false);
               }}
-              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
             >
-              <option value="all">All Categories</option>
               {categories.map(category => (
                 <option key={category.id} value={category.slug}>
                   {category.name}
                 </option>
               ))}
+            </select> */}
+            {/* Category group filter mobile */}
+            <h3 className="font-semibold mb-3 text-gray-700 flex items-center">
+              <FaFilter className="mr-2" />
+              Filter by Group
+            </h3>
+            <select
+              value={selectedCategoryGroup}
+              onChange={(e) => {
+                setSelectedCategoryGroup(e.target.value);
+                setShowMobileFilters(false);
+              }}
+              className="w-full border p-3 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4"
+            >
+              <option value="all">All Groups</option>
+              {CATEGORY_GROUPS.map(group => (
+                <option key={group} value={group}>
+                  {group}
+                </option>
+              ))}
             </select>
+            {/* Price filter mobile */}
+            <h3 className="font-semibold mb-3 text-gray-700 flex items-center mt-4">
+              <FaFilter className="mr-2" />
+              Filter by Price
+            </h3>
+            <div className="flex flex-col items-start space-y-2">
+              <input
+                type="range"
+                min={0}
+                max={1000}
+                step={50}
+                value={maxPrice}
+                onChange={e => setMaxPrice(Number(e.target.value))}
+                className="w-full"
+              />
+              <span className="text-sm text-gray-700">
+                Up to ₹{maxPrice}
+              </span>
+            </div>
           </div>
         )}
 
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar - Category Filter */}
+          {/* Sidebar - Category and Price Filter */}
           <div className="hidden md:block w-full md:w-64 flex-shrink-0">
             <div className="bg-white rounded-lg shadow-sm p-5 sticky top-24">
-              <h3 className="font-semibold mb-4 text-gray-700 flex items-center">
-                <FaFilter className="mr-2" />
-                Filter by Category
-              </h3>
-              <div className="space-y-2">
-                <button
-                  onClick={() => setSelectedCategory("all")}
-                  className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-200 ${
-                    selectedCategory === "all" 
-                      ? "bg-green-600 text-white shadow-md" 
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  All Products
-                </button>
+              {/* Category Filter */}
+             
+              <div className="space-y-2 mb-6">
                 {categories.map(category => (
                   <button
                     key={category.id}
                     onClick={() => setSelectedCategory(category.slug)}
                     className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-200 ${
                       selectedCategory === category.slug
-                        ? "bg-green-600 text-white shadow-md" 
+                        ? "bg-green-600 text-white shadow-md"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
                     }`}
                   >
                     {category.name}
                   </button>
                 ))}
+              </div>
+              {/* Category Group Filter */}
+              <h3 className="font-semibold mb-4 text-gray-700 flex items-center">
+                <FaFilter className="mr-2" />
+                Filter by Group
+              </h3>
+              <div className="space-y-2 mb-6">
+                <button
+                  onClick={() => setSelectedCategoryGroup("all")}
+                  className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-200 ${
+                    selectedCategoryGroup === "all"
+                      ? "bg-green-600 text-white shadow-md"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  All Groups
+                </button>
+                {CATEGORY_GROUPS.map(group => (
+                  <button
+                    key={group}
+                    onClick={() => setSelectedCategoryGroup(group)}
+                    className={`w-full text-left px-4 py-2 rounded-lg transition-all duration-200 ${
+                      selectedCategoryGroup === group
+                        ? "bg-green-600 text-white shadow-md"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {group}
+                  </button>
+                ))}
+              </div>
+              {/* Price Filter */}
+              <h3 className="font-semibold mb-4 text-gray-700 flex items-center">
+                <FaFilter className="mr-2" />
+                Filter by Price
+              </h3>
+              <div className="flex flex-col items-start space-y-2">
+                <input
+                  type="range"
+                  min={0}
+                  max={1000}
+                  step={50}
+                  value={maxPrice}
+                  onChange={e => setMaxPrice(Number(e.target.value))}
+                  className="w-full"
+                />
+                <span className="text-sm text-gray-700">
+                  Up to ₹{maxPrice}
+                </span>
               </div>
             </div>
           </div>
@@ -302,6 +413,11 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
                 {selectedCategory !== "all" && (
                   <span> in <span className="font-semibold text-green-600">
                     {categories.find(c => c.slug === selectedCategory)?.name}
+                  </span></span>
+                )}
+                {maxPrice !== 1000 && (
+                  <span> in <span className="font-semibold text-green-600">
+                    Up to ₹{maxPrice}
                   </span></span>
                 )}
                 {search && (
@@ -404,6 +520,14 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
                                 {cat.name}
                               </span>
                             ))}
+                          </div>
+                        )}
+                        {/* Category Group Badge */}
+                        {product.category_group && (
+                          <div className="mb-2">
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                              {product.category_group}
+                            </span>
                           </div>
                         )}
                         {/* Price */}
@@ -529,8 +653,49 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
                 <button
                   onClick={() => {
                     if (selectedWeights[showWeightPopup]) {
+                      // Add to cart with selected weight, then redirect to /cart
+                      const productId = showWeightPopup;
+                      const product = products.find(p => p.id === productId);
+                      if (!product) return;
+                      const selectedWeight = selectedWeights[productId] || "";
+                      let price = product.price;
+                      if (selectedWeight && product.variations?.weights) {
+                        const foundWeight = product.variations.weights.find(w => w.label === selectedWeight);
+                        if (foundWeight) {
+                          price = foundWeight.price;
+                        } else {
+                          const weight = selectedWeight.toLowerCase();
+                          if (weight.includes("500")) price = product.price * 2;
+                          else if (weight.includes("1kg") || weight.includes("1000")) price = product.price * 4;
+                          else if (weight.includes("250")) price = product.price;
+                        }
+                      } else if (selectedWeight) {
+                        const weight = selectedWeight.toLowerCase();
+                        if (weight.includes("500")) price = product.price * 2;
+                        else if (weight.includes("1kg") || weight.includes("1000")) price = product.price * 4;
+                        else if (weight.includes("250")) price = product.price;
+                      }
+                      const cartItem = {
+                        id: product.id,
+                        name: product.name,
+                        price,
+                        size: selectedWeight || "default",
+                        image: product.image_url || "",
+                        quantity: 1,
+                        category_group: product.category_group,
+                      };
+                      const existingCart = JSON.parse(localStorage.getItem("cart") || "[]");
+                      const existingIndex = existingCart.findIndex(
+                        (item: any) => item.id === cartItem.id && item.size === cartItem.size
+                      );
+                      if (existingIndex !== -1) {
+                        existingCart[existingIndex].quantity += 1;
+                      } else {
+                        existingCart.push(cartItem);
+                      }
+                      localStorage.setItem("cart", JSON.stringify(existingCart));
                       closeWeightPopup();
-                      handleAddToCart(showWeightPopup, { preventDefault: () => {}, stopPropagation: () => {} } as any);
+                      window.location.href = "/cart";
                     }
                   }}
                   disabled={!selectedWeights[showWeightPopup]}
@@ -579,6 +744,9 @@ const uniqueCategories: { id: number; name: string; slug: string }[] = [];
                       />
                       <div className="flex-1">
                         <div className="font-medium text-sm line-clamp-1">{product.name}</div>
+                        {product.category_group && (
+                          <div className="text-xs text-gray-400">{product.category_group}</div>
+                        )}
                         {selectedWeight && <div className="text-xs text-gray-600">{selectedWeight}</div>}
                       </div>
                       <div className="font-semibold">₹{product.price}</div>
