@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@supabase/supabase-js";
+import emailjs from "@emailjs/browser";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FiCheckCircle, FiShoppingBag, FiUser, FiPhone, FiMapPin, FiMessageSquare, FiCreditCard, FiChevronRight } from "react-icons/fi";
@@ -69,15 +70,65 @@ export default function CheckoutPage() {
 
   // ---- email notification helper ----
   async function sendEmailNotification(order: any) {
-    // Replace the URL below with your serverless/email API endpoint
     try {
-      await fetch("/api/email", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID!;
+      const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID!;
+      const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY!;
+
+      // Customer email
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          to_email: form.email || order.customer_details.email,
+          from_name: "FarmHarvest",
+          subject: "Your Order Confirmation",
+          message: `
+          Hi ${order.customer_details.name},
+          
+          Thank you for your order! Here are your details:
+          
+          Order Total: ₹${order.total}
+          Payment: ${order.customer_details.payment}
+          
+          Items:
+          ${order.items.map((i:any)=>`${i.name} (${i.size || "N/A"}) x ${i.qty} = ₹${i.price * i.qty}`).join("\n")}
+          
+          Delivery Address:
+          ${order.customer_details.address}, ${order.customer_details.city}, ${order.customer_details.state} - ${order.customer_details.postcode}
+        `,
         },
-        body: JSON.stringify(order),
-      });
+        publicKey
+      );
+
+      // Company email
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          to_email: "orders@farmharvesttohome.com",
+          from_name: "FarmHarvest Website",
+          subject: "New Order Received",
+          message: `
+          New order received!
+          
+          Customer: ${order.customer_details.name}
+          Phone: ${order.customer_details.phone}
+          Email: ${order.customer_details.email}
+          
+          Total: ₹${order.total}
+          
+          Items:
+          ${order.items.map((i:any)=>`${i.name} (${i.size || "N/A"}) x ${i.qty} = ₹${i.price * i.qty}`).join("\n")}
+          
+          Address: ${order.customer_details.address}, ${order.customer_details.city}, ${order.customer_details.state} - ${order.customer_details.postcode}
+          
+          Notes: ${order.customer_details.notes || "N/A"}
+        `,
+        },
+        publicKey
+      );
+
     } catch (err) {
       console.error("Email notification failed:", err);
     }
