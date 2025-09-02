@@ -129,60 +129,68 @@ export default function Navbar() {
       </div>
 
       {/* Mobile Menu */}
-      {isOpen && (
-        <div className="md:hidden bg-white shadow-md px-4 py-4 space-y-3 font-medium animate-slideDown">
-          {navLinks.map((link) => {
-            if (link.name === "Shop Now") {
-              return (
-                <button
-                  key={link.href}
-                  onClick={handleShopNow}
-                  className={`block w-full py-2 px-4 rounded-full border transition-all duration-300 text-center
-                  ${pathname === link.href
-                      ? "text-white bg-green-600 border-green-600 shadow-md"
-                      : "text-gray-700 border-gray-200 hover:border-green-600 hover:bg-green-50 hover:text-green-600"
-                  }`}
-                >
-                  {link.name}
-                </button>
-              )
-            }
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`block py-2 px-4 rounded-full border transition-all duration-300 text-center
-                ${pathname === link.href
-                    ? "text-white bg-green-600 border-green-600 shadow-md"
-                    : "text-gray-700 border-gray-200 hover:border-green-600 hover:bg-green-50 hover:text-green-600"
-                }`}
-              >
-                {link.name}
-              </Link>
-            )
-          })}
+     {/* Mobile Menu */}
+{isOpen && (
+  <div className="md:hidden bg-white shadow-md px-4 py-4 space-y-3 font-medium animate-slideDown">
+    {navLinks.map((link) => {
+      if (link.name === "Shop Now") {
+        return (
+          <button
+            key={link.href}
+            onClick={(e) => {
+              handleShopNow(e)
+              setIsOpen(false) // ✅ close after click
+            }}
+            className={`block w-full py-2 px-4 rounded-full border transition-all duration-300 text-center
+            ${pathname === link.href
+                ? "text-white bg-green-600 border-green-600 shadow-md"
+                : "text-gray-700 border-gray-200 hover:border-green-600 hover:bg-green-50 hover:text-green-600"
+            }`}
+          >
+            {link.name}
+          </button>
+        )
+      }
+      return (
+        <Link
+          key={link.href}
+          href={link.href}
+          onClick={() => setIsOpen(false)} // ✅ close after click
+          className={`block py-2 px-4 rounded-full border transition-all duration-300 text-center
+          ${pathname === link.href
+              ? "text-white bg-green-600 border-green-600 shadow-md"
+              : "text-gray-700 border-gray-200 hover:border-green-600 hover:bg-green-50 hover:text-green-600"
+          }`}
+        >
+          {link.name}
+        </Link>
+      )
+    })}
 
-          {/* Mobile Auth */}
-          <SignedOut>
-            <SignInButton mode="modal" >
-              <button className="flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-gray-300 
-                hover:border-green-600 hover:bg-green-50 hover:text-green-600 transition-all duration-300">
-                <User className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-medium text-gray-700">Log In</span>
-              </button>
-            </SignInButton>
-          </SignedOut>
+    {/* Mobile Auth */}
+    <SignedOut>
+      <SignInButton mode="modal" >
+        <button 
+          onClick={() => setIsOpen(false)} // ✅ close after login click
+          className="flex items-center justify-center gap-2 px-4 py-2 rounded-full border border-gray-300 
+            hover:border-green-600 hover:bg-green-50 hover:text-green-600 transition-all duration-300">
+          <User className="w-5 h-5 text-green-600" />
+          <span className="text-sm font-medium text-gray-700">Log In</span>
+        </button>
+      </SignInButton>
+    </SignedOut>
 
-          <SignedIn>
-            <div className="flex flex-col items-center gap-3">
-              <span className="font-medium text-gray-700">
-                {user?.fullName || user?.firstName || "User"}
-              </span>
-              <UserButton afterSignOutUrl="/" />
-            </div>
-          </SignedIn>
-        </div>
-      )}
+    <SignedIn>
+      <div className="flex flex-col items-center gap-3">
+        <span className="font-medium text-gray-700">
+          {user?.fullName || user?.firstName || "User"}
+        </span>
+        <UserButton afterSignOutUrl="/" />
+      </div>
+    </SignedIn>
+  </div>
+)}
+
     </nav>
   )
 }

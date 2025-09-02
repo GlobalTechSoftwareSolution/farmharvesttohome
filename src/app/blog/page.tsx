@@ -125,12 +125,6 @@ export default function BlogsSection() {
             <motion.div key={i} variants={itemVariants} className="group relative">
               <Link href={section.link}>
                 <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-500 border-l-4 border-green-500 overflow-hidden">
-                  {/* Decorative number */}
-                  <div className="absolute -top-4 -left-4 w-20 h-20 bg-green-100 rounded-full flex items-center justify-center opacity-20 group-hover:opacity-30 transition-opacity duration-500">
-                    <span className="text-4xl font-bold text-green-800">
-                      {i + 1}
-                    </span>
-                  </div>
 
                   <div className="relative z-10">
                     <h3 className="text-2xl font-bold text-green-900 mb-5 flex items-center">
