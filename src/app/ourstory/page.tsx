@@ -1,7 +1,26 @@
 "use client"
 import { motion } from "framer-motion"
+import Image from "next/image"
 
 export default function StorySection() {
+  const features = [
+    {
+      img: "/images/raisins.webp",
+      alt: "Sun-dried black raisins",
+      text: "Sun-dried black raisins — no sugar, no sulfur, just sweet nature",
+    },
+    {
+      img: "/images/grains.jpg",
+      alt: "Hand-cleaned grains",
+      text: "Hand-cleaned grains full of natural nutrients",
+    },
+    {
+      img: "/images/rice.jpeg",
+      alt: "Traditional rice",
+      text: "Traditional rice grown without chemicals",
+    },
+  ]
+
   return (
     <section className="relative bg-gradient-to-b from-emerald-50 via-green-100/40 to-white py-24 px-6">
       <div className="max-w-5xl mx-auto text-center">
@@ -48,21 +67,33 @@ export default function StorySection() {
         </motion.blockquote>
 
         {/* Feature List */}
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 text-left">
-          {[
-            "🌾 Traditional rice grown without chemicals",
-            "🌿 Hand-cleaned grains full of natural nutrients",
-            "🍇 Sun-dried black raisins — no sugar, no sulfur, just sweet nature",
-          ].map((item, i) => (
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((item, i) => (
             <motion.div
               key={i}
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.8 + i * 0.2, duration: 0.7, ease: "easeOut" }}
               viewport={{ once: true }}
-              className="p-6 bg-white rounded-2xl shadow-md hover:shadow-lg transition-shadow duration-300"
+              className="relative rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
             >
-              <p className="text-lg font-medium text-gray-800">{item}</p>
+              {/* Image */}
+              <Image
+                src={item.img}
+                alt={item.alt}
+                width={400}
+                height={300}
+                className="object-cover w-full h-60 scale-105 hover:scale-110 transition-transform duration-500"
+              />
+              {/* Overlay with Blur */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent flex items-center justify-center px-4">
+              <p className="text-lg font-bold text-white text-center 
+              drop-shadow-[0_3px_6px_rgba(0,0,0,0.95)] 
+              [text-shadow:_0_2px_6px_rgba(0,0,0,0.9)]">
+              {item.text}
+            </p>
+
+          </div>
             </motion.div>
           ))}
         </div>

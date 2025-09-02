@@ -34,12 +34,12 @@ export default function HeroSection() {
 
       <div className="relative z-10 max-w-4xl px-6 text-center text-white">
         <h1 className="text-2xl sm:text-4xl md:text-6xl font-extrabold leading-snug sm:leading-tight">
-          Welcome to <span className="text-green-400">Farm Harvest To Home 🌾</span>
+          Welcome to <span className="text-green-400">Farm Harvest To Home </span>
         </h1>
 
         <p className="mt-6 text-base sm:text-lg md:text-xl leading-relaxed">
-          Fresh, organic, and locally grown farm produce delivered straight to your doorstep.
-          <br /> 🌱 NO CHEMICAL, NO POLISH, JUST REAL FOOD.
+          Fresh, organic, and locally grown with traditional methods, farm produced <br />  delivering straight to your doorstep. <br />
+          <br />  NO CHEMICAL, NO POLISH, JUST REAL FOOD.
         </p>
 
         <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
