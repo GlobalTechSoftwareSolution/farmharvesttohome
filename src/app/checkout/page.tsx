@@ -48,6 +48,44 @@ export default function CheckoutPage() {
     notes: "",
     paymentMethod: "cod",
   });
+    const states = [
+    "Andhra Pradesh",
+    "Arunachal Pradesh",
+    "Assam",
+    "Bihar",
+    "Chhattisgarh",
+    "Goa",
+    "Gujarat",
+    "Haryana",
+    "Himachal Pradesh",
+    "Jharkhand",
+    "Karnataka",
+    "Kerala",
+    "Madhya Pradesh",
+    "Maharashtra",
+    "Manipur",
+    "Meghalaya",
+    "Mizoram",
+    "Nagaland",
+    "Odisha",
+    "Punjab",
+    "Rajasthan",
+    "Sikkim",
+    "Tamil Nadu",
+    "Telangana",
+    "Tripura",
+    "Uttar Pradesh",
+    "Uttarakhand",
+    "West Bengal",
+    "Andaman and Nicobar Islands",
+    "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu",
+    "Delhi",
+    "Jammu and Kashmir",
+    "Ladakh",
+    "Lakshadweep",
+    "Puducherry",
+  ];
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -224,10 +262,10 @@ export default function CheckoutPage() {
             Thank you for your order. We'll contact you shortly on WhatsApp to confirm your order details.
           </p>
           <Link 
-            href="/shop"
+            href="/placeorderdetails"
             className="inline-block bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-300"
           >
-            Continue Shopping
+            Continue Shipping
           </Link>
         </div>
       </div>
@@ -353,16 +391,26 @@ export default function CheckoutPage() {
                       required
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-                    <input
-                      name="state"
-                      value={form.state}
-                      onChange={onChange}
-                      placeholder="State"
-                      className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                    />
-                  </div>
+                <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        State *
+                      </label>
+                      <select
+                        name="state"
+                        value={form.state}
+                        onChange={(e) => setForm({ ...form, state: e.target.value })}
+                        className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">-- Select State --</option>
+                        {states.map((state) => (
+                          <option key={state} value={state}>
+                            {state}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code *</label>
                     <input
