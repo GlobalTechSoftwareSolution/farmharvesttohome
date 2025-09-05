@@ -6,15 +6,6 @@ import { FaArrowRight, FaQuoteLeft, FaBookOpen } from "react-icons/fa";
 
 const blogData = [
   {
-    title: "Reduced Pesticide Exposure & Toxicity",
-    link: "/blog/reduced",
-    points: [
-      "Studies reveal that nearly **75% of conventional produce** carries pesticide residues, with many exceeding safe thresholds. Organic or chemical-free options consistently show **significantly lower residues and lower toxicity risk**. (EWG)",
-      "An observational study found that switching to a fully organic diet can cut pesticide levels in urine by an astonishing **98.6% within two weeks** and may enhance DNA repair mechanisms. (Beyond Pesticides)",
-      "Children and vulnerable groups may especially benefit, given links between pesticide exposure and lowered cognitive performance, ADHD, fertility risks, and cancer. (UC Davis Health / TIME)",
-    ],
-  },
-  {
     title: "Boosted Nutritional Quality & Antioxidants",
     link: "/blog/nutritional-quality",
     points: [
@@ -45,7 +36,15 @@ const blogData = [
       "Chemical-free food typically means **no synthetic additives, preservatives, or GMOs**—a commitment to simplicity, safety, and transparency. (nutriearth.in)",
       "It contributes to **avoiding antibiotic use and synthetic hormones** in livestock, reducing exposure to industrial chemical agro-inputs. (TIME)",
     ],
-  },
+  },{
+    title: "Reduced Pesticide Exposure & Toxicity",
+    link: "/blog/reduced",
+    points: [
+      "Studies reveal that nearly **75% of conventional produce** carries pesticide residues, with many exceeding safe thresholds. Organic or chemical-free options consistently show **significantly lower residues and lower toxicity risk**. (EWG)",
+      "An observational study found that switching to a fully organic diet can cut pesticide levels in urine by an astonishing **98.6% within two weeks** and may enhance DNA repair mechanisms. (Beyond Pesticides)",
+      "Children and vulnerable groups may especially benefit, given links between pesticide exposure and lowered cognitive performance, ADHD, fertility risks, and cancer. (UC Davis Health / TIME)",
+    ],
+  }
 ];
 
 export default function BlogsSection() {

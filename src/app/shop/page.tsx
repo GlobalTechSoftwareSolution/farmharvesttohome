@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { FaShoppingCart, FaSearch, FaFilter, FaTimes } from "react-icons/fa"
+import { FaShoppingCart, FaClipboardList } from "react-icons/fa"
 import Products from '@/app/products/page'
 
 interface Variant {
@@ -40,21 +40,18 @@ export default function ShopPage() {
         const response = await fetch("/api/products?per_page=30")
         const data = await response.json()
 
-        // Normalize the API response
         let productsData = Array.isArray(data) ? data : data.products || data.data || []
 
         const processedProducts = productsData.map((product: any) => {
           let variants: Variant[] = []
 
           if (product.variations && Array.isArray(product.variations) && product.variations.length > 0) {
-            // ✅ Use variations from WooCommerce
             variants = product.variations.map((variation: any) => {
               let rawWeight = variation.attributes?.[0]?.option || "Default"
-
-              // ✅ Normalize units: if "1000g" → "1kg"
-              let weight = rawWeight.toLowerCase().includes("g") && rawWeight.replace(/\D/g, "") === "1000"
-                ? "1kg"
-                : rawWeight
+              let weight =
+                rawWeight.toLowerCase().includes("g") && rawWeight.replace(/\D/g, "") === "1000"
+                  ? "1kg"
+                  : rawWeight
 
               return {
                 weight,
@@ -62,11 +59,10 @@ export default function ShopPage() {
               }
             })
           } else {
-            // ✅ Fallback: provide 3 standard weights
             variants = [
               { weight: "250g", price: product.price ? parseFloat(product.price) * 0.25 : 0 },
               { weight: "500g", price: product.price ? parseFloat(product.price) * 0.5 : 0 },
-              { weight: "1kg",  price: product.price ? parseFloat(product.price) : 0 },
+              { weight: "1kg", price: product.price ? parseFloat(product.price) : 0 },
             ]
           }
 
@@ -103,20 +99,34 @@ export default function ShopPage() {
 
   return (
     <div className="flex flex-col lg:flex-row bg-gray-50 min-h-screen relative">
+  {/* Floating Buttons Wrapper */}
+  <div className="fixed right-3 top-20 lg:top-auto lg:right-10 flex flex-col gap-4">
+    
+    {/* Cart Button */}
+    <button
+      onClick={() => router.push("/cart")}
+      className="bg-green-600 text-white p-3 mt-2 sm:p-4 rounded-full shadow-lg hover:bg-green-700 transition relative"
+    >
+      <FaShoppingCart size={20} className="sm:size-22" />
+      {cartCount > 0 && (
+        <span className="absolute -top-1 -right-1 bg-red-500 text-xs text-white px-1.5 sm:px-2 py-0.5 rounded-full">
+          {cartCount}
+        </span>
+      )}
+    </button>
 
-      {/* Cart Button */}
-      <button
-        onClick={() => router.push("/cart")}
-        className="fixed lg:right-10 md:mt-5 top-4 mr-4 right-3 mt-[5rem] lg:top-auto bg-green-600 text-white p-3 sm:p-4 rounded-full shadow-lg hover:bg-green-700 transition"
-      >
-        <FaShoppingCart size={20} className="sm:size-22" />
-        {cartCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-xs text-white px-1.5 sm:px-2 py-0.5 rounded-full">
-            {cartCount}
-          </span>
-        )}
-      </button>
-      <Products />
-    </div>
+    {/* Orders Button */}
+    <button
+      onClick={() => router.push("/orderhistory")}
+      className="bg-blue-600 text-white p-3 sm:p-4 rounded-full shadow-lg hover:bg-blue-700 transition"
+    >
+      <FaClipboardList size={20} className="sm:size-22" />
+    </button>
+  </div>
+
+  {/* Products Section */}
+  <Products />
+</div>
+
   )
 }

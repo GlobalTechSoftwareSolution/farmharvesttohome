@@ -130,7 +130,7 @@ export default function CheckoutPage() {
           Payment: ${order.customer_details.payment}
           
           Items:
-          ${order.items.map((i:any)=>`${i.name} (${i.size || "N/A"}) x ${i.qty} = ₹${i.price * i.qty}`).join("\n")}
+          ${order.map((i:any)=>`${i.name} (${i.size || "N/A"}) x ${i.qty} = ₹${i.price * i.qty}`).join("\n")}
           
           Delivery Address:
           ${order.customer_details.address}, ${order.customer_details.city}, ${order.customer_details.state} - ${order.customer_details.postcode}

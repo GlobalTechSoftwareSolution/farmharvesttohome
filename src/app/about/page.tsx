@@ -1,6 +1,5 @@
 "use client"
 
-import { useUser, useClerk } from "@clerk/nextjs";
 import { supabase } from "@/app/lib/supabaseClient";
 import Image from "next/image"
 import { useRouter, usePathname  } from "next/navigation"
@@ -11,9 +10,6 @@ export default function About() {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Clerk hooks
-  const { user: clerkUser } = useUser();
-  const { openSignIn } = useClerk();
 
   // Supabase fallback
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
@@ -26,24 +22,23 @@ export default function About() {
   }, []);
 
   // Decide if logged in (either Clerk or Supabase)
-  const isLoggedIn = !!clerkUser || !!supabaseUser;
+  const isLoggedIn = !!supabase || !!supabaseUser;
 
   // unified handler
-  const handleShopNow = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (!isLoggedIn) {
-      // Not logged in → prefer Clerk if available
-      if (openSignIn) {
-        openSignIn({ redirectUrl: "/shop" });
-      } else {
-        router.push("/login?redirect=/shop"); // Supabase fallback
-      }
-    } else {
-      // Already logged in → go directly
-      router.push("/shop");
-    }
-    setIsOpen(false); // close mobile menu if open
-  };
+const handleShopNow = (e: React.MouseEvent) => {
+  e.preventDefault();
+
+  if (!isLoggedIn) {
+    // Supabase login flow
+    router.push("/login?redirect=/shop");
+  } else {
+    // Already logged in → go directly
+    router.push("/shop");
+  }
+
+  setIsOpen(false); // close mobile menu if open
+};
+
 
   return (
     <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12 text-gray-800 leading-relaxed">
@@ -449,12 +444,6 @@ export default function About() {
           Join thousands of satisfied customers who have made the switch to chemical-free, 
           nutrient-rich foods straight from our farms to your home.
         </p>
-           <button
-      onClick={handleShopNow}
-      className="px-8 py-3 md:px-10 md:py-4 bg-white text-green-800 font-semibold rounded-xl shadow-lg hover:bg-green-100 transition duration-300 text-lg"
-    >
-      Shop Now
-    </button>
       </section>
     </div>
   )

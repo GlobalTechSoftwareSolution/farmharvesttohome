@@ -2,16 +2,28 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/app/lib/supabaseClient";
-import { FaArrowLeft, FaBoxOpen, FaCheckCircle, FaWhatsapp, FaShoppingBag } from "react-icons/fa";
-import { FiPackage, FiUser, FiCalendar, FiClock } from "react-icons/fi";
+import { FaArrowLeft, FaCheckCircle, FaWhatsapp, FaShoppingBag, FaHeadset } from "react-icons/fa";
+import { FiPackage, FiUser, FiCalendar, FiChevronRight } from "react-icons/fi";
 import { useRouter } from "next/navigation";
-import { useUser } from "@clerk/nextjs";
+import { useSession } from "@supabase/auth-helpers-react";
+import Image from "next/image";
+
+interface OrderItem {
+  name: string;
+  quantity: number;
+  image: string;
+  price: number;
+  size?: string;
+}
 
 interface Order {
   id: number;
   order_id: string;
   full_name: string;
   created_at: string;
+  items?: OrderItem[];
+  total?: number;
+  image?: string;
 }
 
 export default function PlaceOrderDetails() {
@@ -19,7 +31,8 @@ export default function PlaceOrderDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-  const { user } = useUser();
+  const session = useSession();
+  const user = session?.user;
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -34,10 +47,14 @@ export default function PlaceOrderDetails() {
           console.error("Error fetching order:", error.message);
           setError("Failed to load order details. Please try again.");
         } else if (data && data.length > 0) {
-          let latestOrder = data[0];
+          let latestOrder = data[0] as Order;
 
+          // Ensure full_name is always set
           if (!latestOrder.full_name && user) {
-            latestOrder.full_name = user.fullName || user.username || "Guest User";
+            latestOrder.full_name =
+              (user.user_metadata?.full_name as string) ||
+              user.email ||
+              "Guest User";
           }
 
           setOrder(latestOrder);
@@ -55,24 +72,19 @@ export default function PlaceOrderDetails() {
     fetchOrder();
   }, [user]);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return {
-      date: date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }),
-      time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    };
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <div className="animate-pulse flex flex-col items-center">
-            <div className="rounded-full bg-gray-200 h-16 w-16 mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="flex justify-center mb-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
-          <p className="text-gray-500 mt-4">Fetching your order details...</p>
+          <h2 className="text-lg font-medium text-gray-800 mb-2">
+            Loading your order
+          </h2>
+          <p className="text-gray-500">
+            Please wait while we fetch your order details...
+          </p>
         </div>
       </div>
     );
@@ -81,150 +93,317 @@ export default function PlaceOrderDetails() {
   if (error || !order) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <div className="text-red-500 text-5xl mb-4">⚠️</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Something went wrong</h2>
+        <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <svg
+              className="h-6 w-6 text-red-600"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </div>
+          <h2 className="text-lg font-medium text-gray-800 mb-2">
+            Something went wrong
+          </h2>
           <p className="text-gray-600 mb-6">{error || "No order found."}</p>
-          <button
-            onClick={() => router.push("/")}
-            className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Return to Home
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => router.push("/")}
+              className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            >
+              Return to Home
+            </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const { date, time } = formatDate(order.created_at);
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-indigo-100 p-4">
-      <div className="max-w-lg mx-auto">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 p-4 md:p-6">
+      <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 pt-4">
           <button
             onClick={() => router.back()}
-            className="flex items-center text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            className="flex items-center text-gray-600 hover:text-gray-800 font-medium transition-colors"
           >
             <FaArrowLeft className="mr-2" /> Back
           </button>
-          <div className="text-sm text-gray-500">Order Details</div>
+          <div className="text-sm text-gray-500 font-medium">
+            Order Confirmation
+          </div>
         </div>
 
         {/* Success Card */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
-          <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-5 text-white text-center">
-            <div className="flex justify-center mb-3">
-              <div className="bg-white/20 p-3 rounded-full">
-                <FaCheckCircle className="text-3xl" />
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden mb-6 border border-gray-100">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 p-6 text-white text-center">
+            <div className="flex justify-center mb-4">
+              <div className="bg-white/20 p-4 rounded-full">
+                <FaCheckCircle className="text-3xl text-white" />
               </div>
             </div>
-            <h1 className="text-xl font-bold mb-1">Order Confirmed!</h1>
-            <p className="text-white/90">Thank you for your purchase</p>
+            <h1 className="text-2xl font-bold mb-2">Order Confirmed!</h1>
+            <p className="text-blue-100">
+              Thank you for your purchase. We've sent a confirmation to your
+              email.
+            </p>
           </div>
 
           <div className="p-6">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-semibold text-gray-800">Order Summary</h2>
-                <p className="text-gray-500 text-sm">We'll contact you shortly on WhatsApp</p>
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Order Summary
+                </h2>
+                <p className="text-gray-500 text-sm">
+                  Order #ORD{order.id.toString().padStart(4, "0")}
+                </p>
               </div>
-              <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+              <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
                 Confirmed
               </div>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <div className="bg-blue-100 p-3 rounded-lg mr-4">
-                  <FaShoppingBag className="text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Order ID</p>
-                  <p className="font-medium text-gray-800">ORD{order.id.toString().padStart(4, "0")}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <div className="bg-purple-100 p-3 rounded-lg mr-4">
-                  <FiUser className="text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Customer Name</p>
-                  <p className="font-medium text-gray-800">{order.full_name}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                    <FiUser className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Customer Name</p>
+                    <p className="font-medium text-gray-800">
+                      {order.full_name || user?.user_metadata?.full_name || user?.email || "Guest User"}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center">
-                <div className="bg-amber-100 p-3 rounded-lg mr-4">
-                  <FiCalendar className="text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Order Date</p>
-                  <p className="font-medium text-gray-800">{date}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <div className="bg-green-100 p-3 rounded-lg mr-4">
-                  <FiClock className="text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500">Order Time</p>
-                  <p className="font-medium text-gray-800">{time}</p>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                    <FiCalendar className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Order Date & Time</p>
+                    <p className="font-medium text-gray-800">
+                      {new Date(order.created_at).toLocaleString("en-IN", {
+                        weekday: "long",
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <div className="flex items-center bg-green-50 rounded-lg p-4">
-                <div className="bg-green-100 p-2 rounded-full mr-3">
+            {/* Order Items */}
+            <div className="border-t border-gray-200 pt-4 mb-6">
+              <h3 className="font-medium text-gray-800 mb-3">Items Ordered</h3>
+
+              <div className="space-y-3">
+                {order.items?.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex justify-between items-center py-2 border-b border-gray-100"
+                  >
+                    <div className="flex items-center">
+                      <div className="bg-gray-100 rounded-lg w-10 h-10 flex items-center justify-center mr-3 overflow-hidden">
+                        {item.image ? (
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            width={40}
+                            height={40}
+                            className="object-cover rounded-lg"
+                          />
+                        ) : (
+                          <FiPackage className="text-gray-400 text-2xl" />
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="font-medium text-gray-800">{item.name}</p>
+                        <p className="text-sm text-gray-500">
+                          Qty: {item.quantity} {item.size ? `(${item.size})` : ""}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="font-medium text-gray-800">
+                      ₹{item.price.toFixed(2)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total Section */}
+              <div className="border-t border-gray-200 mt-4 pt-4">
+                <div className="flex justify-between items-center">
+                  <p className="text-gray-600">Total</p>
+                  <p className="text-lg font-bold text-gray-800">
+                    ₹{order.total?.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* WhatsApp Notification */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
+              <div className="flex items-start">
+                <div className="bg-blue-100 p-2 rounded-lg mr-3 flex-shrink-0">
+                  <FaWhatsapp className="text-blue-600 text-lg" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-800 mb-1">
+                    Updates via WhatsApp
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    You'll receive order updates on WhatsApp including shipping
+                    notifications and delivery updates.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Next Steps */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+          <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+            What happens next?
+          </h3>
+          <div className="space-y-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mr-4 mt-1">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                  1
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-gray-800 mb-1">
+                  Order Processing
+                </p>
+                <p className="text-sm text-gray-600">
+                  We'll prepare your order for shipment within 24 hours.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mr-4 mt-1">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                  2
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-gray-800 mb-1">Shipping</p>
+                <p className="text-sm text-gray-600">
+                  Your order will be shipped with tracking information sent to
+                  you.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mr-4 mt-1">
+                <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                  3
+                </div>
+              </div>
+              <div>
+                <p className="font-medium text-gray-800 mb-1">Delivery</p>
+                <p className="text-sm text-gray-600">
+                  Expect your delivery within 3-5 business days.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Support Card */}
+        <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-gray-100">
+          <h3 className="font-semibold text-gray-800 mb-4 text-lg">
+            Need help with your order?
+          </h3>
+          <p className="text-gray-600 mb-4 text-sm">
+            Our customer support team is here to help with any questions about
+            your order.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <a
+              href="tel:+919844281875"
+              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center">
+                <div className="bg-blue-100 p-2 rounded-lg mr-3">
+                  <FaHeadset className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-800">
+                    Contact Support
+                  </p>
+                  <p className="text-xs text-gray-500">Get help with your order</p>
+                </div>
+              </div>
+              <FiChevronRight className="text-gray-400" />
+            </a>
+
+            <a
+              href="https://wa.me/919844281875?text=Hi%20I%20need%20help%20with%20my%20order"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-center">
+                <div className="bg-green-100 p-2 rounded-lg mr-3">
                   <FaWhatsapp className="text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">Updates via WhatsApp</p>
-                  <p className="text-xs text-gray-600">You'll receive order updates on WhatsApp</p>
+                  <p className="text-sm font-medium text-gray-800">
+                    WhatsApp Chat
+                  </p>
+                  <p className="text-xs text-gray-500">Message us directly</p>
                 </div>
               </div>
-            </div>
+              <FiChevronRight className="text-gray-400" />
+            </a>
           </div>
         </div>
 
-        {/* Next Steps Card */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 mb-6">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
-            <FiPackage className="mr-2 text-blue-600" /> What happens next?
-          </h3>
-          <div className="space-y-3">
-            <div className="flex">
-              <div className="flex-shrink-0 mr-3">
-                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">1</div>
-              </div>
-              <p className="text-sm text-gray-600">We'll prepare your order for shipment</p>
-            </div>
-            <div className="flex">
-              <div className="flex-shrink-0 mr-3">
-                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">2</div>
-              </div>
-              <p className="text-sm text-gray-600">You'll receive a confirmation message on WhatsApp</p>
-            </div>
-            <div className="flex">
-              <div className="flex-shrink-0 mr-3">
-                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center text-xs font-bold">3</div>
-              </div>
-              <p className="text-sm text-gray-600">Your order will be shipped within 24 hours</p>
-            </div>
-          </div>
+        {/* Action Buttons */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button
+            onClick={() => router.push("/orderhistory")}
+            className="py-3 px-4 bg-white border border-gray-300 text-gray-800 rounded-lg font-medium hover:bg-gray-50 transition-colors shadow-sm"
+          >
+            View Order History
+          </button>
+          <button
+            onClick={() => router.push("/shop")}
+            className="py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center"
+          >
+            <FaShoppingBag className="mr-2" /> Continue Shopping
+          </button>
         </div>
-
-        {/* Action Button */}
-        <button
-          onClick={() => router.push("/")}
-          className="w-full py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-md"
-        >
-          Continue Shopping
-        </button>
       </div>
     </div>
   );

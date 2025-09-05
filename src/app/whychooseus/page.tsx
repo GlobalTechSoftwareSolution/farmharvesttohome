@@ -2,22 +2,20 @@
 import { motion } from "framer-motion";
 import { FaSeedling, FaLeaf, FaHandshake, FaGlobe } from "react-icons/fa";
 import Link from "next/link";
-import { useUser, useClerk } from "@clerk/nextjs";
 import { supabase } from "@/app/lib/supabaseClient";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useSession } from "@supabase/auth-helpers-react";
 
 export default function About() {
   const [isOpen, setIsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  // Clerk hooks
-  const { user: clerkUser } = useUser();
-  const { openSignIn } = useClerk();
+  const session = useSession();
+  const user = session?.user ?? null;
 
-  // Supabase fallback
   const [supabaseUser, setSupabaseUser] = useState<any>(null);
 
   useEffect(() => {
@@ -27,17 +25,13 @@ export default function About() {
   }, []);
 
   // ✅ Unified login check
-  const isLoggedIn = !!clerkUser || !!supabaseUser;
+  const isLoggedIn = !!user || !!supabaseUser;
 
-  // ✅ Shop Now handler
+  // ✅ Shop Now handler (fixed, no openSignIn)
   const handleShopNow = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!isLoggedIn) {
-      if (openSignIn) {
-        openSignIn({ redirectUrl: "/shop" });
-      } else {
-        router.push("/login?redirect=/shop");
-      }
+      router.push("/login?redirect=/shop"); // Supabase login
     } else {
       router.push("/shop");
     }
