@@ -86,7 +86,7 @@ export default function About() {
         >
           <button
             onClick={handleShopNow}
-            className="px-8 py-3 md:px-10 md:py-4 bg-white text-green-800 font-semibold rounded-xl shadow-lg hover:bg-green-100 transition duration-300 text-lg"
+            className="px-8 py-3 md:px-10 md:py-4 bg-green-600 text-white font-semibold rounded-xl shadow-lg hover:bg-green-800 transition duration-300 text-lg"
           >
             Shop Now And Taste The Difference!
           </button>

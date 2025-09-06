@@ -224,7 +224,7 @@ const handleShopNow = (e: React.MouseEvent) => {
       <div className="w-full mb-16">
         <div className="rounded-2xl overflow-hidden shadow-lg">
           <Image
-            src="/images/wheat.webp"
+            src="/about/wheat.png"
             alt="Organic wheat from our farms"
             width={800}
             height={400}

@@ -14,6 +14,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const router = useRouter();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -29,29 +30,24 @@ export default function SignupPage() {
       setError("All fields are required");
       return false;
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       setError("Please enter a valid email address");
       return false;
     }
-
     if (formData.password.length < 6) {
       setError("Password must be at least 6 characters long");
       return false;
     }
-
     if (formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       return false;
     }
-
     setError("");
     return true;
   };
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateForm()) return;
 
     setIsLoading(true);
@@ -66,8 +62,7 @@ export default function SignupPage() {
       if (error) {
         setError(error.message);
       } else {
-        alert("Registration successful! Please check your email to verify your account.");
-        router.push("/login");
+        setShowSuccessModal(true); // show modal instead of alert
       }
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
@@ -77,7 +72,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4 sm:px-6 lg:px-8 relative">
       <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-lg">
         <div className="text-center">
           <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-full flex items-center justify-center">
@@ -178,9 +173,7 @@ export default function SignupPage() {
               <button
                 type="button"
                 className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700"
-                onClick={() =>
-                  setShowConfirmPassword(!showConfirmPassword)
-                }
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
               >
                 {showConfirmPassword ? "🙈" : "👁️"}
               </button>
@@ -212,6 +205,29 @@ export default function SignupPage() {
           </div>
         </form>
       </div>
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl shadow-xl p-8 max-w-sm text-center">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Registration Successful 🎉
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Please check your email to verify your account before logging in.
+            </p>
+            <button
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+              onClick={() => {
+                setShowSuccessModal(false);
+                router.push("/login");
+              }}
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
