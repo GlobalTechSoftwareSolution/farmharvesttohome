@@ -1,12 +1,9 @@
-// app/login/LoginForm.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/app/lib/supabaseClient";
-import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 
-// Login Page Component
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -17,9 +14,15 @@ export default function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [resetMode, setResetMode] = useState(false);
   const [nameStep, setNameStep] = useState(false);
+  const [redirectUrl, setRedirectUrl] = useState("/");
+
   const router = useRouter();
-  const searchParams = useSearchParams();   
-  const redirectUrl = searchParams.get("redirect") || "/";
+
+  // Get redirect param safely without useSearchParams
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setRedirectUrl(params.get("redirect") || "/");
+  }, []);
 
   // Check session (after OAuth redirect)
   useEffect(() => {
@@ -66,7 +69,7 @@ export default function LoginForm() {
     }
   };
 
-  // Social login (Google / GitHub / Facebook)
+  // Social login
   const handleSocialLogin = async (provider: "google" | "github" | "facebook") => {
     setIsLoading(true);
     setError("");
@@ -88,7 +91,7 @@ export default function LoginForm() {
     }
   };
 
-  // Save name
+  // Save name step
   const handleSaveName = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -107,7 +110,7 @@ export default function LoginForm() {
     setIsLoading(false);
   };
 
-  // Forgot password
+  // Password reset
   const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -131,6 +134,7 @@ export default function LoginForm() {
       setIsLoading(false);
     }
   };
+
 
   // UI
   return (
