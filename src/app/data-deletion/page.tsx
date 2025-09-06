@@ -47,7 +47,8 @@ export default function DataDeletionPage() {
           <h2>Contact</h2>
           <p>
             For any questions about data deletion, contact us at:<br />
-            <strong>Email:</strong> <a href="mailto:farmharvest@gmail.com">farmharvest@gmail.com</a><br />
+            <strong>Email:</strong> <a href="mailto:farmharvesttohome@gmail.com">farmharvesttohome@gmail.com
+</a><br />
             <strong>Phone:</strong> +91-9844281875
           </p>
         </div>
