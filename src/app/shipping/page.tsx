@@ -89,11 +89,6 @@ export default function ShippingPolicy() {
           </p>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="text-center text-sm text-gray-500 border-t pt-4">
-        © {new Date().getFullYear()} Farm Harvest To Home. All rights reserved.
-      </footer>
     </main>
   );
 }

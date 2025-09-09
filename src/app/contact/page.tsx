@@ -154,10 +154,12 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-lg mb-1">Email Us</h3>
                     <a
-                      href="mailto:farmharvest@gmail.com"
+                      href="mailto:farmharvesttohome@gmail.com
+"
                       className="text-green-100 hover:text-green-300 transition"
                     >
-                      farmharvest@gmail.com
+                      farmharvesttohome@gmail.com
+
                     </a>
                   </div>
                 </div>
